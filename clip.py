@@ -116,6 +116,10 @@ def main():
     clip3 = Clip('rawdata/balancethread.mp4', [(6.018, 10.510)])
     clip4 = Clip('rawdata/ifitwinsitsgood.mp4', [(0.0, 20.993), (24.282, 31.806)])
     clip5 = Clip('rawdata/winningtolosing.mp4', [(4.687, 11.904)])
+    clip6 = Clip('rawdata/motherf.mp4', [(6.136, 7.0)])
+    clip7 = Clip('rawdata/fuc.mp4', [(6.502, 8.0)])
+    clip8 = Clip('rawdata/icantmovemyunits.mp4', [(7.425, 32.768)])
+    clip9 = Clip('rawdata/thenextbisu.mp4', [(4.405, 20.0)])
 
     #clip1.print_summary()
     #clip1.generate_data2('data/train')
@@ -125,8 +129,18 @@ def main():
     #clip3.generate_data2('data/train')
     #clip4.print_summary()
     #clip4.generate_data2('data/train')
-    clip5.print_summary()
-    clip5.generate_data2('data/val') 
+    #clip6.print_summary()
+    #clip6.generate_data2('data/train')
+    #clip7.print_summary()
+    #clip7.generate_data2('data/train')
+    #clip8.print_summary()
+    #clip8.generate_data2('data/train')
+    clip9.print_summary()
+    clip9.generate_data2('data/train')
+
+
+    #clip5.print_summary()
+    #clip5.generate_data2('data/val') 
 
 
 if __name__ == '__main__':
