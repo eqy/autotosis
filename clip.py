@@ -1,3 +1,5 @@
+import ast
+import csv
 import os
 import subprocess
 import shutil
@@ -7,10 +9,12 @@ from PIL import Image
 import ffmpeg
 
 FRAMESKIP = 4
+DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
 class Clip(object):
-    def __init__(self, filename, positive_segments=None, face_bbox=[0.7833, 0.1296, 0.9682, 0.3694]):
+    def __init__(self, filename, positive_segments=None, face_bbox=DEFAULT_FACE_BBOX):
         self.filename = filename
+        assert os.path.exists(self.filename)
         if positive_segments is not None: 
             self.positive_segments = positive_segments
         else:
@@ -104,11 +108,38 @@ class Clip(object):
                     break
             self.read_frame_as_jpg(i)
 
+    def to_row(self):
+        row = list()
+        row.append(self.filename)
+        row.append(self.face_bbox)
+        for segment in self.positive_segments:
+            row.append(segment)
+        return row
+
     def print_summary(self):
         print(self.filename)
         print(self.height, self.width)
         print(self.framerate)
         print(self.duration)
+        print(self.positive_segments)
+
+
+def load_clip_from_csv_row(row):
+    positive_segments = list()
+    for i, item in enumerate(row):
+        if i == 0:
+            filename = item
+        elif i == 1:
+            face_bbox = ast.literal_eval(item)
+        else:
+            segment = ast.literal_eval(item)
+            assert segment[0] <= segment[1]
+            if len(positive_segments):
+                assert positive_segments[-1][1] <= segment[0]
+            positive_segments.append(segment)
+
+    return Clip(filename, positive_segments, face_bbox)
+
 
 def main():
     clip1 = Clip('rawdata/idontevenwanttodoit.mp4', [(0.0, 9.0)])
@@ -142,8 +173,12 @@ def main():
     clip29 = Clip('rawdata/whatthef.mp4', [(2.118, 5.0)])
     clip30 = Clip('rawdata/artyinpain.mp4', [(4.386, 28.159), (28.708, 35.164)])
     clip31 = Clip('rawdata/sosad.mp4', [(1.271, 2.687), (3.536, 6.0)])
- 
+    clip32 = Clip('rawdata/guyinthechat.mp4', [(0.320, 15.497)])
 
+    clips = [clip1, clip2, clip3, clip4, clip5, clip6, clip7, clip8, clip9,
+             clip10, clip11, clip12, clip13, clip14, clip15, clip16, clip17,
+             clip18, clip19, clip20, clip21, clip22, clip23, clip24, clip25,
+             clip26, clip27, clip28, clip29, clip30, clip31, clip32]  
     #clip1.print_summary()
     #clip1.generate_data2('data/train')
     #clip2.print_summary()
@@ -196,17 +231,36 @@ def main():
     #clip26.generate_data2('data/train')
     #clip27.print_summary()
     #clip27.generate_data2('data/train')
-    clip28.print_summary()
-    clip28.generate_data2('data/train')
-    clip29.print_summary()
-    clip29.generate_data2('data/train')
-    clip30.print_summary()
-    clip30.generate_data2('data/train')
-    clip31.print_summary()
-    clip31.generate_data2('data/train')
+    #clip28.print_summary()
+    #clip28.generate_data2('data/train')
+    #clip29.print_summary()
+    #clip29.generate_data2('data/train')
+    #clip30.print_summary()
+    #clip30.generate_data2('data/train')
+    #clip31.print_summary()
+    #clip31.generate_data2('data/train')
 
     #clip5.print_summary()
     #clip5.generate_data2('data/val') 
+
+
+
+    #with open('data.csv', 'w') as csvfile:
+    #    csvwriter = csv.writer(csvfile, delimiter=' ')
+    #    for clip in clips:
+    #        csvwriter.writerow(clip.to_row())
+
+    clips = list()
+    with open('data.csv', 'r') as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=' ')
+        for row in csvreader:
+            clip = load_clip_from_csv_row(row)
+            clip.print_summary()
+            clips.append(clip)
+    
+    for i in range(32, len(clips)):
+        clips[i].print_summary()
+        clips[i].generate_data2('data/train')
 
 
 if __name__ == '__main__':
