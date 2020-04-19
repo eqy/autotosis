@@ -135,10 +135,23 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch](num_classes=2, pretrained=True)
+        model = models.__dict__[args.arch](pretrained=True)
+        if 'resnet' in args.arch:
+            assert model.fc is not None
+            model.fc = nn.Linear(model.fc.in_features, 2)
+        elif 'mobilenet' in args.arch:
+            assert model.classifier is not None
+            assert isinstance(model.classifier, nn.Sequential)
+            assert isinstance(model.classifier[1], nn.Linear)
+            new_linear = nn.Linear(model.classifier[1].in_features, 2)
+            new_classifier = nn.Sequential(nn.Dropout(0.2), new_linear)
+            model.classifier = new_classifier
+        else:
+            raise ValueError("unsupported pretrained scale model...")
     else:
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch](num_classes=2)
+
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -214,8 +227,8 @@ def main_worker(gpu, ngpus_per_node, args):
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
-            #transforms.RandomResizedCrop(224),
-            #transforms.RandomHorizontalFlip(),
+            transforms.RandomResizedCrop(args.resolution, scale=(0.7, 1.0)),
+            transforms.RandomHorizontalFlip(),
             transforms.Resize(args.resolution),
             transforms.ToTensor(),
             normalize,
