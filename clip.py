@@ -73,7 +73,7 @@ class Clip(object):
         for dirpath, dirnames, filenames in os.walk(dest_path):
             if dirpath == pos_path or dirpath == neg_path:
                 continue
-            bar = Bar('inference progress', max=len(filenames))
+            bar = Bar('generating progress', max=len(filenames))
             for filename in filenames:
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
@@ -119,7 +119,9 @@ class Clip(object):
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
         for dirpath, dirnames, filenames in os.walk(tempdir):
+            bar = Bar('generating progress', max=len(filenames))
             for filename in filenames:
+                bar.next()
                 if basename not in filename:
                     continue
                 name, ext = os.path.splitext(filename)
@@ -144,6 +146,7 @@ class Clip(object):
                     pred = get_prediction(im2, inference_model)
                     inference_results[time_idx].append((true_frame_num, float(pred[0,1])))
                     os.unlink(os.path.join(dirpath, filename))
+        bar.finish()
         max_len = 0
         for i in range(len(inference_results)):
             inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
