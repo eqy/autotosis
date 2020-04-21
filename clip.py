@@ -59,7 +59,7 @@ class Clip(object):
             os.makedirs(neg_path)
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-vf', f'fps={str(int(self.framerate))}', os.path.join(dest_path, f'{basename}%d.jpg')]
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate))}', os.path.join(dest_path, f'{basename}%d.jpg')]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
         for dirpath, dirnames, filenames in os.walk(dest_path):
@@ -100,7 +100,7 @@ class Clip(object):
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         rounded_framerate = int(self.framerate)
         assert rounded_framerate % INFERENCE_FRAMESKIP == 0
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-vf', f'fps={str(int(self.framerate)//INFERENCE_FRAMESKIP)}', os.path.join(tempdir, f'{basename}%d.jpg')]
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate)//INFERENCE_FRAMESKIP)}', os.path.join(tempdir, f'{basename}%d.jpg')]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
         print(self.duration)
@@ -158,11 +158,15 @@ class Clip(object):
             second = self.inference_results[i]
             chunks = len(second)
             chunksiz = 1.0/chunks
+
             for j in range(chunks):
                 pred = self.inference_results[i][j]
                 start = i + j*chunksiz
                 end = start + chunksiz
-                stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor='red', enable=f'between(t,{start},{end})')
+                red = int(255*pred)
+                green = int(255*(1.0-pred))
+                fontcolor=f'{red:02x}{green:02x}00'
+                stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         #stream = ffmpeg.map_audio(stream, audio_stream)
         stream = ffmpeg.output(audio, stream, dest_path)
         stream = ffmpeg.overwrite_output(stream)
@@ -342,7 +346,7 @@ def main():
     
     for i in range(38, len(clips)):
         clips[i].print_summary()
-        if i == 38:
+        if i == 4 or i == 38:
             clips[i].generate_data2('data/val')
         else:
             clips[i].generate_data2('data/train')
