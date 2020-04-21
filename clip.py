@@ -29,14 +29,20 @@ class Clip(object):
         probe = ffmpeg.probe(filename)
         #print(probe)
 
-        video_meta = probe['streams'][0]
+        for meta in probe['streams']:
+            if meta['codec_type'] == 'video': 
+                video_meta = meta
+                break
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.duration = float(video_meta['duration'])
-        self.nb_frames = int(video_meta['nb_frames'])
+        if 'nb_frames' in video_meta:
+            self.nb_frames = int(video_meta['nb_frames'])
+        else:
+            self.nb_frames = int(float(video_meta['duration'])*self.framerate)
 
     def read_frame_as_jpg(self, frame_num):
         out, err = (
@@ -170,7 +176,7 @@ class Clip(object):
         rounded_framerate = int(self.framerate)
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        stream = stream.drawbox(x=700, y=900, height=80, width=540, color='black', t='max')
+        stream = stream.drawbox(x=700, y=900, height=80, width=550, color='black', t='max')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -238,8 +244,14 @@ class Clip(object):
                 start_time = b[0]
                 end_time = min(bin_size*(n_bins-1), start_time + bin_size)
                 if adjacent:
-                    start_time = max(0, start_time - 5)
+                    start_time = max(0, start_time - bin_size)
+                    while start_time in processed:
+                        start_time += bin_size
                     min(bin_size*(n_bins-1), end_time + bin_size)
+
+                if end_time - start_time <= 0:
+                    continue
+                    
                 print(start_time, end_time)
                 start_frame = rounded_framerate*start_time
                 end_frame = rounded_framerate*end_time
