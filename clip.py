@@ -17,7 +17,9 @@ DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
 
 class Clip(object):
-    def __init__(self, filename, positive_segments=None, face_bbox=DEFAULT_FACE_BBOX):
+    def __init__(self, filename, positive_segments=None,
+                 face_bbox=DEFAULT_FACE_BBOX,
+                 inference_frameskip=INFERENCE_FRAMESKIP):
         self.filename = filename
         if not os.path.exists(self.filename):
             raise ValueError('clip source not found')
@@ -38,6 +40,7 @@ class Clip(object):
         self.width = int(video_meta['width'])
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
+        self.inference_frameskip = inference_frameskip
         self.duration = float(video_meta['duration'])
         if 'nb_frames' in video_meta:
             self.nb_frames = int(video_meta['nb_frames'])
@@ -110,8 +113,8 @@ class Clip(object):
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         rounded_framerate = int(self.framerate)
-        assert rounded_framerate % INFERENCE_FRAMESKIP == 0
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate)//INFERENCE_FRAMESKIP)}', os.path.join(tempdir, f'{basename}%d.jpg')]
+        assert rounded_framerate % self.inference_frameskip == 0
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate)//self.inference_frameskip)}', os.path.join(tempdir, f'{basename}%d.jpg')]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
         print(self.duration)
@@ -127,7 +130,7 @@ class Clip(object):
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
                     frame_num = int(name.split(basename)[1])
-                    true_frame_num = (frame_num - 1)*INFERENCE_FRAMESKIP
+                    true_frame_num = (frame_num - 1)*self.inference_frameskip
                     time = true_frame_num/rounded_framerate
                     time_idx = int(time)
                     #dst = os.path.join(dest_path, label)

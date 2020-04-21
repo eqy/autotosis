@@ -1,6 +1,8 @@
+import args
 import os
 from clip import Clip
 
+# TODO: add prefix support, concat -> process -> concat
 
 def main():
     #test = 'rawdata/whatthefrickvultures.mp4'

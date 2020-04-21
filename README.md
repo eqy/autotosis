@@ -28,3 +28,12 @@ In more detail, this includes:
 + Overlaying dynamic text at a fine granuarlity to video clips
 + Trimming long videos to regions of interest according to model predictions
 + Concatenating clips of interest into longer highlight reels.
+
+## Dependencies
++ python 3.6
++ pytorch + torchvision
++ pillow
++ numpy
++ progress
++ ffmpeg
++ ffmpeg-python
