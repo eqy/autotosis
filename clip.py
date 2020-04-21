@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import numpy as np
 from PIL import Image
+from progress.bar import Bar
 
 # 'ffmpeg-python', not 'ffmpeg' in pip
 import ffmpeg
@@ -13,6 +14,7 @@ from artosisnet import get_inference_model, get_prediction
 
 INFERENCE_FRAMESKIP = 15
 DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
+
 
 class Clip(object):
     def __init__(self, filename, positive_segments=None, face_bbox=DEFAULT_FACE_BBOX):
@@ -65,6 +67,7 @@ class Clip(object):
         for dirpath, dirnames, filenames in os.walk(dest_path):
             if dirpath == pos_path or dirpath == neg_path:
                 continue
+            bar = Bar('inference progress', max=len(filenames))
             for filename in filenames:
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
@@ -89,6 +92,8 @@ class Clip(object):
                     else:
                         im2 = im.resize((output_resolution, output_resolution))
                     im2.save(dst)
+                bar.next()
+        bar.finish()
 
     def inference(self, model_path, arch='resnet18', crop=True, output_resolution=128):
         tempdir = 'temp/'
@@ -147,32 +152,103 @@ class Clip(object):
                     inference_results[i].append(mean)
         self.inference_results = inference_results
 
-
+    def _drawtext(self, stream, second, second_preds):
+        chunks = len(second_preds)
+        chunksiz = 1.0/chunks
+        for j in range(chunks):
+            pred = second_preds[j]
+            start = second + j*chunksiz
+            end = start + chunksiz
+            red = int(255*pred)
+            green = int(255*(1.0-pred))
+            fontcolor=f'{red:02x}{green:02x}00'
+            stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+        return stream
+ 
     def generate_annotated(self, dest_path):
         assert self.inference_results is not None
         rounded_framerate = int(self.framerate)
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        stream = stream.drawbox(x=700, y=900, height=100, width=600, color='black', t='max')
+        stream = stream.drawbox(x=700, y=900, height=80, width=540, color='black', t='max')
         for i in range(len(self.inference_results)):
-            second = self.inference_results[i]
-            chunks = len(second)
-            chunksiz = 1.0/chunks
-
-            for j in range(chunks):
-                pred = self.inference_results[i][j]
-                start = i + j*chunksiz
-                end = start + chunksiz
-                red = int(255*pred)
-                green = int(255*(1.0-pred))
-                fontcolor=f'{red:02x}{green:02x}00'
-                stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
-        #stream = ffmpeg.map_audio(stream, audio_stream)
+            second_preds = self.inference_results[i]
+            stream = self._drawtext(stream, i, second_preds)
+       #stream = ffmpeg.map_audio(stream, audio_stream)
         stream = ffmpeg.output(audio, stream, dest_path)
         stream = ffmpeg.overwrite_output(stream)
         ffmpeg.run(stream)
-        
 
+    def bin(self, bin_size=5):
+        assert self.inference_results is not None
+        bins = list()
+        for i in range(0, len(self.inference_results), bin_size):
+            window = list()
+            for j in range(i, i+bin_size):
+                if j >= len(self.inference_results):
+                    break
+                window += self.inference_results[j]
+            mean = np.mean(window)
+            bins.append((i, mean))
+        self.bins = bins
+
+    # some voodoo from the ffmpeg python github
+    # start and end are TIMES (in seconds), not FRAMES
+    def _trim(self, dest, start, end):
+        input_stream = ffmpeg.input(self.filename)
+        print(start, end)
+        vid = (
+            input_stream.video
+            .trim(start=start, end=end)
+            .setpts('PTS-STARTPTS')
+        )
+        vid = vid.drawbox(x=700, y=900, height=80, width=540, color='black', t='max')
+        for i in range(start, end):
+            second_preds = self.inference_results[i]
+            vid = self._drawtext(vid, i-start, second_preds)
+             
+        aud = (
+            input_stream.audio
+            .filter_('atrim', start=start, end=end)
+            .filter_('asetpts', 'PTS-STARTPTS')
+        )
+    
+        joined = ffmpeg.concat(vid, aud, v=1, a=1).node
+        output = ffmpeg.output(joined[0], joined[1], dest)
+        output = ffmpeg.overwrite_output(output)
+        output.run() 
+
+    # TODO: avoid having to pass bin size to this function?
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.95):
+        tempdir = 'tempclips/'
+        if not os.path.exists(tempdir):
+            os.makedirs(tempdir)
+
+        basename = os.path.splitext(os.path.basename(self.filename))[0]
+        top_bins = sorted(self.bins, key=lambda item:item[1], reverse=True)
+        # already output bin (times)
+        processed = set()
+        n_bins = len(top_bins)
+        rounded_framerate = int(self.framerate)
+        for i in range(0, max(int((1.0-percentile)*n_bins), 1)):
+            b = top_bins[i]
+            if b[0] in processed:
+                continue
+            else:
+                start_time = b[0]
+                end_time = min(bin_size*(n_bins-1), start_time + bin_size)
+                if adjacent:
+                    start_time = max(0, start_time - 5)
+                    min(bin_size*(n_bins-1), end_time + bin_size)
+                print(start_time, end_time)
+                start_frame = rounded_framerate*start_time
+                end_frame = rounded_framerate*end_time
+                print(start_frame, end_frame)
+                dest = os.path.join(tempdir, f'{basename}{i}.mp4')
+                self._trim(dest, start=start_time, end=end_time)
+                for t in range(start_time, end_time, bin_size):
+                    processed.add(t)
+        
     def generate_data(self, dest_path):
         # basically don't use this, frame by frame is too goddamn slow
         raise Exception
