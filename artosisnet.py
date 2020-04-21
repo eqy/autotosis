@@ -129,14 +129,18 @@ def get_inference_model(model_path, arch='resnet18'):
     model.eval()
     return model
 
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
 
 def get_prediction(img, model):
     img = transforms.ToTensor()(img) 
+    img = normalize(img)
     img = torch.unsqueeze(img, 0)
     if torch.cuda.device_count():
         img.cuda()
     with torch.no_grad():
-        output = torch.softmax(model(img), -1)
+        output = model(img)
+        output = torch.softmax(output, 1)
     return output
 
 
