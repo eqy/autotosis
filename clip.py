@@ -3,18 +3,22 @@ import csv
 import os
 import subprocess
 import shutil
+import numpy as np
 from PIL import Image
 
 # 'ffmpeg-python', not 'ffmpeg' in pip
 import ffmpeg
 
-FRAMESKIP = 4
+from artosisnet import get_inference_model, get_prediction
+
+INFERENCE_FRAMESKIP = 15
 DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
 class Clip(object):
     def __init__(self, filename, positive_segments=None, face_bbox=DEFAULT_FACE_BBOX):
         self.filename = filename
-        assert os.path.exists(self.filename)
+        if not os.path.exists(self.filename):
+            raise ValueError('clip source not found')
         if positive_segments is not None: 
             self.positive_segments = positive_segments
         else:
@@ -64,7 +68,7 @@ class Clip(object):
             for filename in filenames:
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
-                    frame_num = int(name.split(basename)[1])
+                    frame_num = int(name.split(basename)[1]) - 1
                     time = frame_num/self.framerate
                     label = '0'
                     for interval in self.positive_segments:
@@ -83,9 +87,66 @@ class Clip(object):
                                        int(self.face_bbox[3]*self.height)))
                         im2 = im2.resize((output_resolution, output_resolution))
                     else:
-                        im2 = im.resize(output_resolution, output_resolution)
+                        im2 = im.resize((output_resolution, output_resolution))
                     im2.save(dst)
-                    
+
+    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=128):
+        tempdir = 'temp/'
+        if not os.path.exists(tempdir):
+            os.makedirs(tempdir)
+
+        inference_model = get_inference_model(model_path, arch)
+
+        basename = os.path.splitext(os.path.basename(self.filename))[0]
+        rounded_framerate = int(self.framerate)
+        assert rounded_framerate % INFERENCE_FRAMESKIP == 0
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-vf', f'fps={str(int(self.framerate)//INFERENCE_FRAMESKIP)}', os.path.join(tempdir, f'{basename}%d.jpg')]
+        print(ffmpeg_cmd)
+        subprocess.call(ffmpeg_cmd) 
+        print(self.duration)
+          
+        inference_results = None
+        inference_results = [list() for i in range(int(np.ceil(self.duration)))]
+        print(inference_results)
+        for dirpath, dirnames, filenames in os.walk(tempdir):
+            for filename in filenames:
+                if basename not in filename:
+                    continue
+                name, ext = os.path.splitext(filename)
+                if ext == '.jpg':
+                    print(name)
+                    frame_num = int(name.split(basename)[1])
+                    true_frame_num = (frame_num - 1)*INFERENCE_FRAMESKIP
+                    time = true_frame_num/rounded_framerate
+                    time_idx = int(time)
+                    #dst = os.path.join(dest_path, label)
+                    #dst = os.path.join(dst, filename)
+                    src = os.path.join(dirpath, filename) 
+                    #shutil.move(src, src) 
+                    im = Image.open(src)
+                    if crop:
+                        im2 = im.crop((int(self.face_bbox[0]*self.width),
+                                       int(self.face_bbox[1]*self.height),
+                                       int(self.face_bbox[2]*self.width),
+                                       int(self.face_bbox[3]*self.height)))
+                        im2 = im2.resize((output_resolution, output_resolution))
+                    else:
+                        im2 = im.resize((output_resolution, output_resolution))
+                    pred = get_prediction(im2, inference_model)
+                    inference_results[time_idx].append((true_frame_num, float(pred[0,1])))
+        max_len = 0
+        for i in range(len(inference_results)):
+            inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
+            inference_results[i] = [res[1] for res in inference_results[i]]
+            if len(inference_results[i]) > max_len:
+                max_len = len(inference_results[i])
+        # mean padding
+        for i in range(len(inference_results)):
+            if len(inference_results[i]) < max_len:
+                mean = np.mean(inference_results[i])
+                while len(inference_results[i]) < max_len:
+                    inference_results[i].append(mean)
+        self.inference_results = inference_results
 
     def generate_data(self, dest_path):
         # basically don't use this, frame by frame is too goddamn slow

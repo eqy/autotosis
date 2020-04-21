@@ -116,6 +116,31 @@ def main():
         main_worker(args.gpu, ngpus_per_node, args)
 
 
+def get_inference_model(model_path, arch='resnet18'):
+    print("=> creating model '{}'".format(arch))
+    model = models.__dict__[arch](num_classes=2)
+    if torch.cuda.device_count():
+        model.cuda()
+    print("=> loading checkpoint '{}'".format(model_path))
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint['state_dict'])
+    print("=> loaded checkpoint '{}' (epoch {})"
+          .format(model_path, checkpoint['epoch']))
+    model.eval()
+    return model
+
+
+def get_prediction(img, model):
+    img = transforms.ToTensor()(img) 
+    img = torch.unsqueeze(img, 0)
+    if torch.cuda.device_count():
+        img.cuda()
+    with torch.no_grad():
+        output = torch.softmax(model(img), -1)
+    print(output)
+    return output
+
+
 def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
     args.gpu = gpu
@@ -439,4 +464,3 @@ def accuracy(output, target):
 
 if __name__ == '__main__':
     main()
-
