@@ -137,7 +137,6 @@ def get_prediction(img, model):
         img.cuda()
     with torch.no_grad():
         output = torch.softmax(model(img), -1)
-    print(output)
     return output
 
 

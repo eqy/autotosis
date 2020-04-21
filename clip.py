@@ -107,14 +107,12 @@ class Clip(object):
           
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
-        print(inference_results)
         for dirpath, dirnames, filenames in os.walk(tempdir):
             for filename in filenames:
                 if basename not in filename:
                     continue
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
-                    print(name)
                     frame_num = int(name.split(basename)[1])
                     true_frame_num = (frame_num - 1)*INFERENCE_FRAMESKIP
                     time = true_frame_num/rounded_framerate
@@ -134,6 +132,7 @@ class Clip(object):
                         im2 = im.resize((output_resolution, output_resolution))
                     pred = get_prediction(im2, inference_model)
                     inference_results[time_idx].append((true_frame_num, float(pred[0,1])))
+                    os.unlink(os.path.join(dirpath, filename))
         max_len = 0
         for i in range(len(inference_results)):
             inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
@@ -147,6 +146,28 @@ class Clip(object):
                 while len(inference_results[i]) < max_len:
                     inference_results[i].append(mean)
         self.inference_results = inference_results
+
+
+    def generate_annotated(self, dest_path):
+        assert self.inference_results is not None
+        rounded_framerate = int(self.framerate)
+        stream = ffmpeg.input(self.filename)
+        audio = stream.audio
+        stream = stream.drawbox(x=700, y=900, height=100, width=600, color='black', t='max')
+        for i in range(len(self.inference_results)):
+            second = self.inference_results[i]
+            chunks = len(second)
+            chunksiz = 1.0/chunks
+            for j in range(chunks):
+                pred = self.inference_results[i][j]
+                start = i + j*chunksiz
+                end = start + chunksiz
+                stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor='red', enable=f'between(t,{start},{end})')
+        #stream = ffmpeg.map_audio(stream, audio_stream)
+        stream = ffmpeg.output(audio, stream, dest_path)
+        stream = ffmpeg.overwrite_output(stream)
+        ffmpeg.run(stream)
+        
 
     def generate_data(self, dest_path):
         # basically don't use this, frame by frame is too goddamn slow
