@@ -340,9 +340,12 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(32, len(clips)):
+    for i in range(38, len(clips)):
         clips[i].print_summary()
-        clips[i].generate_data2('data/train')
+        if i == 38:
+            clips[i].generate_data2('data/val')
+        else:
+            clips[i].generate_data2('data/train')
 
 
 if __name__ == '__main__':
