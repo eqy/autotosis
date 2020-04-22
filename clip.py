@@ -122,7 +122,7 @@ class Clip(object):
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
         for dirpath, dirnames, filenames in os.walk(tempdir):
-            bar = Bar('generating progress', max=len(filenames))
+            bar = Bar('inference progress', max=len(filenames))
             for filename in filenames:
                 bar.next()
                 if basename not in filename:
@@ -182,7 +182,7 @@ class Clip(object):
         rounded_framerate = int(self.framerate)
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        stream = stream.drawbox(x=700, y=900, height=80, width=550, color='black', t='max')
+        stream = stream.drawbox(x=700, y=900, height=80, width=560, color='black', t='max')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -231,19 +231,21 @@ class Clip(object):
         output.run() 
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.95):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.99):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
-        basename = os.path.splitext(os.path.basename(self.filename))[0]
+        basename = os.path.splitext(os.path.basename(self.filename))[0] + 'temp'
+        # sorted by percentile
         top_bins = sorted(self.bins, key=lambda item:item[1], reverse=True)
         # already output bin (times)
         processed = set()
         n_bins = len(top_bins)
         rounded_framerate = int(self.framerate)
-        for i in range(0, max(int((1.0-percentile)*n_bins), 1)):
-            b = top_bins[i]
+        max_idx = max(int((1.0-percentile)*n_bins), 1)
+        selected_bins = sorted(top_bins[:max_idx], key=lambda item:item[0])
+        for i, b in enumerate(selected_bins):
             if b[0] in processed:
                 continue
             else:
@@ -253,7 +255,7 @@ class Clip(object):
                     start_time = max(0, start_time - bin_size)
                     while start_time in processed:
                         start_time += bin_size
-                    min(bin_size*(n_bins-1), end_time + bin_size)
+                    end_time = min(bin_size*(n_bins-1), end_time + bin_size)
 
                 if end_time - start_time <= 0:
                     continue
@@ -438,7 +440,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(38, len(clips)):
+    for i in range(39, len(clips)):
         clips[i].print_summary()
         if i == 4 or i == 38:
             clips[i].generate_data2('data/val')
