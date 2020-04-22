@@ -339,49 +339,6 @@ def load_clip_from_csv_row(row):
 
 
 def main():
-    clip1 = Clip('rawdata/idontevenwanttodoit.mp4', [(0.0, 9.0)])
-    clip2 = Clip('rawdata/highspirits.mp4', [(0.0, 25.0)])
-    clip3 = Clip('rawdata/balancethread.mp4', [(6.018, 10.510)])
-    clip4 = Clip('rawdata/ifitwinsitsgood.mp4', [(0.0, 20.993), (24.282, 31.806)])
-    clip5 = Clip('rawdata/winningtolosing.mp4', [(4.687, 11.904)])
-    clip6 = Clip('rawdata/motherf.mp4', [(6.136, 7.0)])
-    clip7 = Clip('rawdata/fuc.mp4', [(6.502, 8.0)])
-    clip8 = Clip('rawdata/icantmovemyunits.mp4', [(7.425, 32.768)])
-    clip9 = Clip('rawdata/thenextbisu.mp4', [(4.405, 20.0)])
-    clip10 = Clip('rawdata/beautiful.mp4', [(1.9, 5.185), (10.973, 14.420)])
-    clip11 = Clip('rawdata/amigonnamiss.mp4', [(4.004, 19.084), (20.568, 23.235)])
-    clip12 = Clip('rawdata/thestupidestthing.mp4', [(9.219, 30)])
-    clip13 = Clip('rawdata/holdlurkers.mp4', [(7.850, 16.335), (17.972, 20.864), (23.485, 24.816)])
-    clip14 = Clip('rawdata/artosisisallofus.mp4', [(10.496, 24.0)])
-    clip15 = Clip('rawdata/everythinghedoesissostupid.mp4', [(2.281, 6.636)])
-    clip16 = Clip('rawdata/imgettingsoangry.mp4', [(4.375, 17.958), (25.067, 29.0)])
-    clip17 = Clip('rawdata/pensiveclown.mp4', [(9.051, 15.657)])
-    clip18 = Clip('rawdata/butitworks.mp4', [(9.964, 20.0)])
-    clip19 = Clip('rawdata/thetruthaboutvalks.mp4', [(3.383, 6.560), (8.350, 10.897), (12.502, 14.474), (16.2, 20.0)])
-    clip20 = Clip('rawdata/artosisandtheperfectbuild.mp4', [(15.151, 34.074), (40.485, 47.162)])
-    clip21 = Clip('rawdata/youkiddingme.mp4', [(13.094, 17.090), (18.484, 21.141)])
-    clip22 = Clip('rawdata/goodmicro.mp4', [(9.807, 20.903)])
-    clip23 = Clip('rawdata/cantmicrohere.mp4', [(27.594, 33.064)])
-    clip24 = Clip('rawdata/specialwinaslbuild.mp4', [(2.252, 4.406), (5.985, 8.352), (10.203, 15.036)])
-    clip25 = Clip('rawdata/nooneisthisbad.mp4', [(2.202, 9.362)])
-    clip26 = Clip('rawdata/whoa.mp4', [(9.301, 13.893)])
-    clip27 = Clip('rawdata/twospidermines.mp4', [(4.068, 11.932)])
-    clip28 = Clip('rawdata/howmany.mp4', [(9.891, 13.0)])
-    clip29 = Clip('rawdata/whatthef.mp4', [(2.118, 5.0)])
-    clip30 = Clip('rawdata/artyinpain.mp4', [(4.386, 28.159), (28.708, 35.164)])
-    clip31 = Clip('rawdata/sosad.mp4', [(1.271, 2.687), (3.536, 6.0)])
-    clip32 = Clip('rawdata/guyinthechat.mp4', [(0.320, 15.497)])
-
-    clips = [clip1, clip2, clip3, clip4, clip5, clip6, clip7, clip8, clip9,
-             clip10, clip11, clip12, clip13, clip14, clip15, clip16, clip17,
-             clip18, clip19, clip20, clip21, clip22, clip23, clip24, clip25,
-             clip26, clip27, clip28, clip29, clip30, clip31, clip32]  
-
-    #clip5.print_summary()
-    #clip5.generate_data2('data/val') 
-
-
-
     #with open('data.csv', 'w') as csvfile:
     #    csvwriter = csv.writer(csvfile, delimiter=' ')
     #    for clip in clips:
