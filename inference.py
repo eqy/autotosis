@@ -32,6 +32,8 @@ def main():
         else:
             break
 
+    paths = sorted(paths)
+
     if not len(paths):
         assert os.path.exists(args.prefix)
 
