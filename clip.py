@@ -192,7 +192,9 @@ class Clip(object):
 
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        stream = stream.drawbox(x=900, y=900, height=80, width=280, color='black', t='max')
+        box_width = 280
+        x = 1920//2 - box_width//2
+        stream = stream.drawbox(x=x, y=900, height=80, width=box_width, color='black', t='max')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -224,7 +226,9 @@ class Clip(object):
             .trim(start=start, end=end)
             .setpts('PTS-STARTPTS')
         )
-        vid = vid.drawbox(x=900, y=900, height=80, width=280, color='black', t='max')
+        box_width = 280
+        x = 1920//2 - box_width//2
+        vid = vid.drawbox(x=x, y=900, height=80, width=box_width, color='black', t='max')
 
         for i in range(start, end):
             second_preds = self.inference_results[i]
