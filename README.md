@@ -13,6 +13,10 @@ From here, a fun experiment from a few questions:
 In this case, I chose the binary task to be the one used to generate the Artosis videos (e.g., Rage or Not Rage), relying on his face cam as the only input data.
 It turns out that you need relatively few labels to get a model like ResNet-18 off the ground.
 With only about three dozen "labeled" clips, the model was already producing usable predictions.
+One issue that I didn't anticipate is that the "distribution" of frames is different when considering clips vs. full stream sessions or VODs.
+Clips have a high likelihood of having rage or at least something interesting---they've been selected for a reason.
+However, VODs may have long periods of little-to-no interesting reactions from the streamer, and getting the false-positive rate of the model down can be tricky.
+I'm currently doing a long "student-teacher" manual loop: the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
 
 Here, "labeling" is just simply roughly annotating which segments of each clip corresponded to Rage Moments, and the corresponding frames for the model are extracted via `ffmpeg`.
 Note that this kind of labeling basically also causes the model to label smiling as rage, becuase there are some good rage moments where Artosis is laughing.
