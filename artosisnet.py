@@ -78,6 +78,9 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 
+
+best_precision = 0
+best_recall = 0
 best_acc1 = 0
 
 
@@ -146,6 +149,8 @@ def get_prediction(img, model):
 
 def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
+    global best_precision
+    global best_recall
     args.gpu = gpu
 
     if args.gpu is not None:
@@ -234,6 +239,8 @@ def main_worker(gpu, ngpus_per_node, args):
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
+            if best_precision in checkpoint:
+                best_precision = checkpoint['best_precision']
             if args.gpu is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
                 best_acc1 = best_acc1.to(args.gpu)
@@ -294,11 +301,13 @@ def main_worker(gpu, ngpus_per_node, args):
         train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1, prec, rec = validate(val_loader, model, criterion, args)
 
         # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
+        # is_best = acc1 > best_acc1
+        is_best = precision > best_precision
         best_acc1 = max(acc1, best_acc1)
+        best_precision = max(prec, best_precision)
 
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):
@@ -307,6 +316,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
+                'best_precision': best_precision,
                 'optimizer' : optimizer.state_dict(),
             }, is_best)
 
@@ -316,10 +326,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
+    precision = AverageMeter('Precis:', ':1.6f')
+    recall = AverageMeter('Recall:', ':1.6f')
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, top1, top5],
+        [batch_time, data_time, losses, top1, precision, recall],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -340,9 +351,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        acc1 = accuracy(output, target)
+        acc1, prec, rec = accuracy(output, target)
         losses.update(loss.detach().item(), images.size(0))
         top1.update(acc1, images.size(0))
+        precision.update(prec, images.size(0))
+        recall.update(rec, images.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -361,10 +374,12 @@ def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
+    precision = AverageMeter('Precis:', ':1.6f')
+    recall = AverageMeter('Recall:', ':1.6f')
+
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, top5],
+        [batch_time, losses, top1, precision, recall],
         prefix='Test: ')
 
     # switch to evaluate mode
@@ -384,9 +399,11 @@ def validate(val_loader, model, criterion, args):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            acc1 = accuracy(output, target)
+            acc1, prec, rec = accuracy(output, target)
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
+            precision.update(prec, images.size(0))
+            recall.upate(rec, images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -396,8 +413,8 @@ def validate(val_loader, model, criterion, args):
                 progress.display(i)
 
         # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
+        print(' * Acc@1 {top1.avg:.3f} Precision {precision.avg:.3f} Recall {recall.avg:.3f}'
+              .format(top1=top1, precision=precision, recall=recall))
 
     return top1.avg
 
@@ -461,8 +478,13 @@ def accuracy(output, target):
     with torch.no_grad():
         batch_size = target.size(0)
         _, pred = torch.max(output, axis=1)
-        res = float(pred.eq(target).sum(0))*(100.0 / batch_size)
-        return res
+        # 1*1=1, 1*0=0, 0*0=0
+        # correct pos/pred pos
+        precision = float(torch.mul(pred, target).sum(0))/float(pred.sum(0))
+        # correct pos/real pos
+        recall = float(torch.mul(pred, target).sum(0))/float(target.sum(0))
+        acc = float(pred.eq(target).sum(0))*(100.0 / batch_size)
+        return acc, precision, recall
 
 
 if __name__ == '__main__':
