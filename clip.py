@@ -12,7 +12,7 @@ import ffmpeg
 
 from artosisnet import get_inference_model, get_prediction
 
-INFERENCE_FRAMESKIP = 15
+INFERENCE_FRAMESKIP = 30
 DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
 
@@ -70,7 +70,9 @@ class Clip(object):
             os.makedirs(neg_path)
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate))}', os.path.join(dest_path, f'{basename}%d.jpg')]
+        fps_str = f'fps={str(int(self.framerate))}'
+        jpeg_str = os.path.join(dest_path, f'{basename}%d.jpg')
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
         for dirpath, dirnames, filenames in os.walk(dest_path):
@@ -92,11 +94,13 @@ class Clip(object):
                     src = os.path.join(dirpath, filename) 
                     shutil.move(src, dst) 
                     im = Image.open(dst)
+                    height = im.height
+                    width = im.width
                     if crop:
-                        im2 = im.crop((int(self.face_bbox[0]*self.width),
-                                       int(self.face_bbox[1]*self.height),
-                                       int(self.face_bbox[2]*self.width),
-                                       int(self.face_bbox[3]*self.height)))
+                        im2 = im.crop((int(self.face_bbox[0]*width),
+                                       int(self.face_bbox[1]*height),
+                                       int(self.face_bbox[2]*width),
+                                       int(self.face_bbox[3]*height)))
                         im2 = im2.resize((output_resolution, output_resolution))
                     else:
                         im2 = im.resize((output_resolution, output_resolution))
@@ -112,9 +116,12 @@ class Clip(object):
         inference_model = get_inference_model(model_path, arch)
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
-        rounded_framerate = int(self.framerate)
+        rounded_framerate = int(np.round(self.framerate))
         assert rounded_framerate % self.inference_frameskip == 0
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', f'fps={str(int(self.framerate)//self.inference_frameskip)}', os.path.join(tempdir, f'{basename}%d.jpg')]
+        res_str = f'{self.width//2}x{self.height//2}'
+        fps_str = f'fps={str(int(self.framerate)//self.inference_frameskip)}'
+        jpeg_str = os.path.join(tempdir, f'{basename}%d.jpg')
+        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
         print(self.duration)
@@ -138,11 +145,13 @@ class Clip(object):
                     src = os.path.join(dirpath, filename) 
                     #shutil.move(src, src) 
                     im = Image.open(src)
+                    height = im.height
+                    width = im.width
                     if crop:
-                        im2 = im.crop((int(self.face_bbox[0]*self.width),
-                                       int(self.face_bbox[1]*self.height),
-                                       int(self.face_bbox[2]*self.width),
-                                       int(self.face_bbox[3]*self.height)))
+                        im2 = im.crop((int(self.face_bbox[0]*width),
+                                       int(self.face_bbox[1]*height),
+                                       int(self.face_bbox[2]*width),
+                                       int(self.face_bbox[3]*height)))
                         im2 = im2.resize((output_resolution, output_resolution))
                     else:
                         im2 = im.resize((output_resolution, output_resolution))
@@ -174,15 +183,16 @@ class Clip(object):
             red = int(255*pred)
             green = int(255*(1.0-pred))
             fontcolor=f'{red:02x}{green:02x}00'
-            stream = stream.drawtext(text=f"rage probability: {pred:.3f}", x=700, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            stream = stream.drawtext(text=f"rage: {pred:.3f}", x=900, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
         assert self.inference_results is not None
-        rounded_framerate = int(self.framerate)
+        rounded_framerate = int(np.round(self.framerate))
+
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        stream = stream.drawbox(x=700, y=900, height=80, width=560, color='black', t='max')
+        stream = stream.drawbox(x=900, y=900, height=80, width=280, color='black', t='max')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -214,7 +224,8 @@ class Clip(object):
             .trim(start=start, end=end)
             .setpts('PTS-STARTPTS')
         )
-        vid = vid.drawbox(x=700, y=900, height=80, width=540, color='black', t='max')
+        vid = vid.drawbox(x=900, y=900, height=80, width=280, color='black', t='max')
+
         for i in range(start, end):
             second_preds = self.inference_results[i]
             vid = self._drawtext(vid, i-start, second_preds)
