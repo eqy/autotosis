@@ -3,7 +3,7 @@ Training a standard imagenet architecture like ResNet-18 for a different classif
 
 These days I find myself ~~watching a lot of twitch streamers (e.g., [Artosis](twitch.tv/artosis))~~ with a lot of extra time while waiting for models to train.
 Artosis happens to have an extensive selection of high quality community-curated clips.
-Compilations of these clips are entertaining (NSFW) [1](https://www.youtube.com/watch?v=ykvlpUbGy6w) [2](https://www.youtube.com/watch?v=bBevrkgI5uc), but building them requires human eyeballs and effort.
+Compilations of these clips are entertaining (EXPLICIT language) [1](https://www.youtube.com/watch?v=ykvlpUbGy6w) [2](https://www.youtube.com/watch?v=bBevrkgI5uc), but building them requires human eyeballs and effort.
 
 From here, a fun experiment from a few questions:
 - What's the minimal amount of data I need to get a model like ResNet-18 off-the-ground for a binary prediction task with clips?
