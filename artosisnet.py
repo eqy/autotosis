@@ -301,7 +301,7 @@ def main_worker(gpu, ngpus_per_node, args):
         train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1, prec, rec = validate(val_loader, model, criterion, args)
+        acc1, precision, recall = validate(val_loader, model, criterion, args)
 
         # remember best acc@1 and save checkpoint
         # is_best = acc1 > best_acc1
@@ -416,7 +416,7 @@ def validate(val_loader, model, criterion, args):
         print(' * Acc@1 {top1.avg:.3f} Precision {precision.avg:.3f} Recall {recall.avg:.3f}'
               .format(top1=top1, precision=precision, recall=recall))
 
-    return top1.avg
+    return top1.avg, precision.avg, recall.avg
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
