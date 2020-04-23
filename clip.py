@@ -361,8 +361,11 @@ def main():
     
     for i in range(39, len(clips)):
         clips[i].print_summary()
-        if i < 40 and (i == 4 or i == 38):
-            clips[i].generate_data2('data/val')
+        if i < 40:
+            if i == 4 or i == 38:
+                clips[i].generate_data2('data/val')
+            else:
+                clips[i].generate_data2('data/train')
         elif i % 4 == 0:
             clips[i].generate_data2('data/val')
         else:
