@@ -307,7 +307,7 @@ def main_worker(gpu, ngpus_per_node, args):
         # is_best = acc1 > best_acc1
         is_best = precision > best_precision
         best_acc1 = max(acc1, best_acc1)
-        best_precision = max(prec, best_precision)
+        best_precision = max(precision, best_precision)
 
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):
