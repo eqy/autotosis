@@ -403,7 +403,7 @@ def validate(val_loader, model, criterion, args):
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             precision.update(prec, prec_weight)
-            recall.upate(rec, rec_weight)
+            recall.update(rec, rec_weight)
 
             # measure elapsed time
             batch_time.update(time.time() - end)
