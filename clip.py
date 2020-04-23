@@ -246,7 +246,7 @@ class Clip(object):
         output.run() 
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.99):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.99, delete_temp=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -260,6 +260,8 @@ class Clip(object):
         rounded_framerate = int(self.framerate)
         max_idx = max(int((1.0-percentile)*n_bins), 1)
         selected_bins = sorted(top_bins[:max_idx], key=lambda item:item[0])
+
+        temp_clips = list()
         for i, b in enumerate(selected_bins):
             if b[0] in processed:
                 continue
@@ -281,8 +283,13 @@ class Clip(object):
                 print(start_frame, end_frame)
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
                 self._trim(dest, start=start_time, end=end_time)
+                temp_clips.append(dest)
                 for t in range(start_time, end_time, bin_size):
                     processed.add(t)
+
+        if delete_temp:
+            for temp_clip_path in temp_clips:
+                os.unlink(temp_clip_path)
         
     def generate_data(self, dest_path):
         # basically don't use this, frame by frame is too goddamn slow
@@ -354,7 +361,9 @@ def main():
     
     for i in range(39, len(clips)):
         clips[i].print_summary()
-        if i == 4 or i == 38:
+        if i < 40 and (i == 4 or i == 38):
+            clips[i].generate_data2('data/val')
+        elif i % 4 == 0:
             clips[i].generate_data2('data/val')
         else:
             clips[i].generate_data2('data/train')

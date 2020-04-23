@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--prefix", help="prefix of file name to parse", required=True)
     parser.add_argument("-n", "--name", help="name of output", required=True)
+    parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
     args = parser.parse_args()
 
     paths = list()
@@ -51,7 +52,7 @@ def main():
         os.unlink(tempvideolist)
         clip.bin()
         print(clip.bins)
-        clip.generate_highlights()
+        clip.generate_highlights(delete_temp=args.delete_temp)
         os.unlink(tempconcatvideo)
     else:
         os.unlink(tempconcatvideo)
