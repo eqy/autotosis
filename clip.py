@@ -71,7 +71,8 @@ class Clip(object):
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         fps_str = f'fps={str(int(self.framerate))}'
-        jpeg_str = os.path.join(dest_path, f'{basename}%d.jpg')
+        jpeg_str = os.path.join(dest_path, f'{basename}_%d.jpg')
+        basename = basename + '_'
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
@@ -246,7 +247,7 @@ class Clip(object):
         output.run() 
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.99, delete_temp=False):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, delete_temp=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -359,7 +360,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(39, len(clips)):
+    for i in range(0, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
@@ -374,6 +375,3 @@ def main():
 
 if __name__ == '__main__':
     main() 
-
-
-

@@ -351,11 +351,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        acc1, prec, rec = accuracy(output, target)
+        acc1, prec, rec, prec_weight, rec_weight = accuracy(output, target)
         losses.update(loss.detach().item(), images.size(0))
         top1.update(acc1, images.size(0))
-        precision.update(prec, images.size(0))
-        recall.update(rec, images.size(0))
+        precision.update(prec, prec_weight)
+        recall.update(rec, rec_weight)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -399,11 +399,11 @@ def validate(val_loader, model, criterion, args):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            acc1, prec, rec = accuracy(output, target)
+            acc1, prec, rec, prec_weight, rec_weight = accuracy(output, target)
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
-            precision.update(prec, images.size(0))
-            recall.upate(rec, images.size(0))
+            precision.update(prec, prec_weight)
+            recall.upate(rec, rec_weight)
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -480,11 +480,19 @@ def accuracy(output, target):
         _, pred = torch.max(output, axis=1)
         # 1*1=1, 1*0=0, 0*0=0
         # correct pos/pred pos
-        precision = float(torch.mul(pred, target).sum(0))/float(pred.sum(0))
+        pred_pos = float(pred.sum(0))
+        if pred_pos:
+            precision = float(torch.mul(pred, target).sum(0))/pred_pos
+        else:
+            precision = 1.0
         # correct pos/real pos
-        recall = float(torch.mul(pred, target).sum(0))/float(target.sum(0))
+        target_pos = float(target.sum(0))
+        if target_pos: 
+            recall = float(torch.mul(pred, target).sum(0))/target_pos
+        else:
+            recall = 1.0
         acc = float(pred.eq(target).sum(0))*(100.0 / batch_size)
-        return acc, precision, recall
+        return acc, precision, recall, pred_pos, target_pos
 
 
 if __name__ == '__main__':
