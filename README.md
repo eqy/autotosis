@@ -1,7 +1,7 @@
 # autotosis
 Training a standard imagenet architecture like ResNet-18 for a different classification task isn't exactly cutting edge, but it's a fun way to wait for other (more important/serious/"real") models to train.
 
-These days I find myself ~~watching a lot of twitch streamers (e.g., [Artosis](twitch.tv/artosis))~~ with a lot of extra time while waiting for models to train.
+These days I find myself ~~watching a lot of twitch streamers~~ (e.g., [Artosis](twitch.tv/artosis)) with a lot of extra time while waiting for models to train.
 Artosis happens to have an extensive selection of high quality community-curated clips.
 Compilations of these clips are entertaining (EXPLICIT language) [1](https://www.youtube.com/watch?v=ykvlpUbGy6w) [2](https://www.youtube.com/watch?v=bBevrkgI5uc), but building them requires human eyeballs and effort.
 
