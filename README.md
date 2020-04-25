@@ -1,4 +1,4 @@
-# autotosis
+#from  autotosis
 Training a standard imagenet architecture like ResNet-18 for a different classification task isn't exactly cutting edge, but it's a fun way to wait for other (more important/serious/"real") models to train.
 
 These days I find myself ~~watching a lot of twitch streamers (e.g., [Artosis](twitch.tv/artosis))~~ with a lot of extra time while waiting for models to train.
@@ -30,7 +30,7 @@ However, it turns out that this is still fast enough to train a 128x128 input re
 For longer video clips, inference can be "sped up" by subsampling the video (e.g., predictions at << 60fps).
 
 
-Finally, `ffmpeg` remains clunky but powerful and fast, and it was wholly able to accomplish all of the tasks needed to train the model, ingest video for predictions, and re-slice videos to automatically generate highlight compilations.
+Finally, `ffmpeg` remains clunky but powerful and fast (for most tasks), and it was wholly able to accomplish all of the tasks needed to train the model, ingest video for predictions, and re-slice videos to automatically generate highlight compilations.
 In more detail, this includes:
 - Extracting frames from video (.mp4s to many .jpgs)
 - Overlaying dynamic text at a fine granuarlity to video clips
