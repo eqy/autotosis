@@ -1,4 +1,4 @@
-#autotosis
+# autotosis
 Training a standard imagenet architecture like ResNet-18 for a different classification task isn't exactly cutting edge, but it's a fun way to wait for other (more important/serious/"real") models to train.
 
 These days I find myself ~~watching a lot of twitch streamers (e.g., [Artosis](twitch.tv/artosis))~~ with a lot of extra time while waiting for models to train.
@@ -26,7 +26,7 @@ Note that this kind of labeling basically also causes the model to label smiling
 
 
 All my other machines (that have GPUs) are currently busy at the moment doing "real" work, so I tried training this ResNet-18 on my ancient i5-3570K (it doesn't even have AVX2 extensions!) machine.
-However, it turns out that this is still fast enough to train a 128x128 input resolution model in a few days.
+However, it turns out that this is still fast enough to train a 128x128 input resolution model.
 For longer video clips, inference can be "sped up" by subsampling the video (e.g., predictions at << 60fps).
 
 
@@ -57,7 +57,8 @@ ArtosisNet was prototyped on a destitute and ancient 7-year old PC running Windo
 If I had the resources, I would use another machine, but all of my lab boxes are busy with "real" work.
 One major drawback of WSL is that there is no GPU/CUDA support, so ArtosisNet was trained entirely on *CPU*, an aging i5-3570K slightly overclocked to 4 GHz.
 At a batch size of 32 and frugal input resolution of 128x128, ArtosisNet (with its ResNet-18-based architecture) takes approximately 2 seconds per batch when the machine is not busy with other tasks.
-Training for ~90 epochs takes several days on this machine. 
+Training for ~90 epochs takes several days on this machine.
+Update: it seems that with the current amount of data, only two epochs of training are needed before the model starts overfitting, so prototyping with CPU training remains reasonably quick.
 
 
 Somewhat surprisingly, the current bottleneck seems to be the ffmepg encoding pipeline when extracting multiple highlight clips from an input video.
