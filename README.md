@@ -27,7 +27,7 @@ Note that this kind of labeling basically also causes the model to label smiling
 
 All my other machines (that have GPUs) are currently busy at the moment doing "real" work, so I tried training this ResNet-18 on my ancient i5-3570K (it doesn't even have AVX2 extensions!) machine.
 However, it turns out that this is still fast enough to train a 128x128 input resolution model.
-For longer video clips, inference can be "sped up" by subsampling the video (e.g., predictions at << 60fps).
+For longer video clips, inference can be "sped up" by subsampling the video (e.g., predictions at << 60 fps).
 
 
 Finally, `ffmpeg` remains clunky but powerful and fast (for most tasks), and it was wholly able to accomplish all of the tasks needed to train the model, ingest video for predictions, and re-slice videos to automatically generate highlight compilations.
@@ -55,8 +55,8 @@ In more detail, this includes:
 ## other technical fluff
 ### input processing
 I'm not very familiar with torchvision's [video offerings](https://pytorch.org/docs/stable/torchvision/io.html), so autotosis is built off the back of ffmpeg and PIL.
-For training, each video is processed into 128x128 frames by first extracting each frame (at 60fps) and cropping to the artoFace region.
-We can speed up the inference time by decreasing the framerate at which frames are dumped (e.g., from 60fps down to 4fps).
+For training, each video is processed into 128x128 frames by first extracting each frame (at 60 fps) and cropping to the artoFace region.
+We can speed up the inference time by decreasing the framerate at which frames are dumped (e.g., from 60 fps down to 4 fps).
 
 ### training time/hardware setup
 ArtosisNet was prototyped on a destitute and ancient 7-year old PC running Windows + WSL.
