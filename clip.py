@@ -38,6 +38,7 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
+        self.box_width = 300
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
@@ -188,7 +189,8 @@ class Clip(object):
             red = int(255*pred)
             green = int(255*(1.0-pred))
             fontcolor=f'{red:02x}{green:02x}00'
-            stream = stream.drawtext(text=f"rage: {pred:.3f}", x=900, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            x = 1920//2 - self.box_width//2
+            stream = stream.drawtext(text=f"rage: {pred:.3f}", x=x, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -197,9 +199,8 @@ class Clip(object):
 
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        box_width = 280
-        x = 1920//2 - box_width//2
-        stream = stream.drawbox(x=x, y=900, height=80, width=box_width, color='black', t='max')
+        x = 1920//2 - self.box_width//2
+        stream = stream.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='max')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -232,9 +233,8 @@ class Clip(object):
             .trim(start=start, end=end)
             .setpts('PTS-STARTPTS')
         )
-        box_width = 280
-        x = 1920//2 - box_width//2
-        vid = vid.drawbox(x=x, y=900, height=80, width=box_width, color='black', t='max')
+        x = 1920//2 - self.box_width//2
+        vid = vid.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='max')
 
         for i in range(start, end):
             second_preds = self.inference_results[i]
@@ -257,7 +257,7 @@ class Clip(object):
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
-        basename = os.path.splitext(os.path.basename(self.filename))[0] + 'temp'
+        basename = os.path.splitext(os.path.basename(self.filename))[0] + '_highlight'
         # sorted by percentile
         top_bins = sorted(self.bins, key=lambda item:item[1], reverse=True)
         # already output bin (times)
