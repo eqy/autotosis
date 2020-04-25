@@ -14,7 +14,7 @@ In this case, I chose the binary task to be the one used to generate the Artosis
 It turns out that you need relatively few labels to get a model like ResNet-18 off the ground.
 With only about three dozen "labeled" clips, the model was already producing usable predictions.
 
-Still, one issue that I didn't anticipate is that the "distribution" of frames is different when considering clips vs. full stream sessions or VODs.
+One issue that I didn't anticipate is that the "distribution" of frames is different when considering clips vs. full stream sessions or VODs.
 Community-sourced clips have a high likelihood of having rage or at least something interesting---they've been selected for a reason.
 However, VODs may have long periods of little to no interesting reactions from the streamer, and getting the false-positive rate of the model down can be tricky.
 I'm currently doing a long "student-teacher" manual loop: I run the model on a longer VOD (~a few hours of video), the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
@@ -47,10 +47,10 @@ In more detail, this includes:
 - ffmpeg-python
 
 ## Workflow
-Add data to data.csv
-`python3 clip.py` to generate training data
-`python3 artosisnet.py data -b 32` example to train (seems like only a few epochs are needed before overfitting)
-`python3 inference -p input.mp4 -n output.mp4` example to generate highlights
+- Add data to data.csv
+- `python3 clip.py` to generate training data
+- `python3 artosisnet.py data -b 32` example to train (seems like only a few epochs are needed before overfitting)
+- `python3 inference -p input.mp4 -n output.mp4` example to generate highlights
 
 ## other technical fluff
 ### input processing
