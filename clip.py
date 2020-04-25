@@ -128,7 +128,7 @@ class Clip(object):
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
-        print(self.duration)
+        print("duration:", self.duration)
           
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
@@ -256,8 +256,22 @@ class Clip(object):
         output = ffmpeg.overwrite_output(output)
         output.run() 
 
+    def _concat_highlights(self, paths, output_path):
+        tempfile = 'highlightconcatlist'
+        with open(tempfile, 'w') as f:
+            for path in paths:
+                f.write(f'file \'{path}\'\n')
+        (
+        ffmpeg
+        .input(tempfile, format='concat', safe=0)
+        .output(output_path, c='copy')
+        .overwrite_output()
+        .run()
+        )
+
+
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, delete_temp=False):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, output_path='output.mp4', delete_temp=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -297,6 +311,8 @@ class Clip(object):
                 temp_clips.append(dest)
                 for t in range(start_time, end_time, bin_size):
                     processed.add(t)
+        
+        self._concat_highlights(temp_clips, output_path)
 
         if delete_temp:
             for temp_clip_path in temp_clips:
@@ -370,7 +386,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(61, len(clips)):
+    for i in range(69, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:

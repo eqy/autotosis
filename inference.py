@@ -38,7 +38,7 @@ def highlights(args):
     if not len(paths):
         assert os.path.exists(args.prefix)
 
-    if len(paths) > 1:
+    if len(paths) >= 1:
         print("joining videos...")
         tempvideolist = 'tempvideolist'
         basename = os.path.splitext(args.name)[0]
@@ -52,11 +52,15 @@ def highlights(args):
         os.unlink(tempvideolist)
         clip.bin()
         print(clip.bins)
-        clip.generate_highlights(delete_temp=args.delete_temp)
+        clip.generate_highlights(output_path=args.name, delete_temp=args.delete_temp)
         os.unlink(tempconcatvideo)
     else:
-        os.unlink(tempconcatvideo)
-    
+        path = args.prefix
+        clip = Clip(path)
+        clip.inference('model_best.pth.tar')
+        clip.bin()
+        print(clip.bins)
+        clip.generate_highlights(output_path=args.name, percentile=args.percentile, delete_temp=args.delete_temp)
 
 
 def main():
@@ -65,6 +69,7 @@ def main():
     parser.add_argument("-p", "--prefix", help="prefix of file name to parse")
     parser.add_argument("-n", "--name", help="name of output", required=True)
     parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
+    parser.add_argument("--percentile", default=0.995, type=float)
     args = parser.parse_args()
 
 
