@@ -46,6 +46,12 @@ In more detail, this includes:
 - ffmpeg
 - ffmpeg-python
 
+## Workflow
+Add data to data.csv
+`python3 clip.py` to generate training data
+`python3 artosisnet.py data -b 32` example to train (seems like only a few epochs are needed before overfitting)
+`python3 inference -p input.mp4 -n output.mp4` example to generate highlights
+
 ## other technical fluff
 ### input processing
 I'm not very familiar with torchvision's [video offerings](https://pytorch.org/docs/stable/torchvision/io.html), so autotosis is built off the back of ffmpeg and PIL.
