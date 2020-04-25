@@ -17,7 +17,7 @@ With only about three dozen "labeled" clips, the model was already producing usa
 One issue that I didn't anticipate is that the "distribution" of frames is different when considering clips vs. full stream sessions or VODs.
 Community-sourced clips have a high likelihood of having rage or at least something interesting---they've been selected for a reason.
 However, VODs may have long periods of little to no interesting reactions from the streamer, and getting the false-positive rate of the model down can be tricky.
-I'm currently doing a long "student-teacher" manual loop: I run the model on a longer VOD (~a few hours of video), the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
+I'm currently doing a long ["student-teacher"](https://arxiv.org/abs/1911.04252) manual loop: I run the model on a longer VOD (~a few hours of video), the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
 Another hack is to use precision as the validation criteria for selecting the best model instead of outright accuracy when the data is imbalanced.
 
 
