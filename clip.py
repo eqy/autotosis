@@ -120,8 +120,10 @@ class Clip(object):
         rounded_framerate = int(np.round(self.framerate))
         assert rounded_framerate % self.inference_frameskip == 0
         res_str = f'{self.width//2}x{self.height//2}'
-        fps_str = f'fps={str(int(self.framerate)//self.inference_frameskip)}'
-        jpeg_str = os.path.join(tempdir, f'{basename}%d.jpg')
+        inference_fps = int(np.round(self.framerate/self.inference_frameskip))
+        fps_str = f'fps={inference_fps}'
+        jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
+        basename = basename + '_'
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd) 
@@ -130,6 +132,7 @@ class Clip(object):
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
         for dirpath, dirnames, filenames in os.walk(tempdir):
+            print(len(filenames))
             bar = Bar('inference progress', max=len(filenames))
             for filename in filenames:
                 bar.next()
@@ -138,8 +141,8 @@ class Clip(object):
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
                     frame_num = int(name.split(basename)[1])
-                    true_frame_num = (frame_num - 1)*self.inference_frameskip
-                    time = true_frame_num/rounded_framerate
+                    time = (frame_num - 1)/inference_fps
+                    true_frame_num = int((frame_num - 1) * self.framerate/inference_fps)
                     time_idx = int(time)
                     #dst = os.path.join(dest_path, label)
                     #dst = os.path.join(dst, filename)
@@ -162,6 +165,7 @@ class Clip(object):
         bar.finish()
         max_len = 0
         for i in range(len(inference_results)):
+            # sort each second by "true" frame number
             inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
             inference_results[i] = [res[1] for res in inference_results[i]]
             if len(inference_results[i]) > max_len:
@@ -214,6 +218,7 @@ class Clip(object):
                     break
                 window += self.inference_results[j]
             mean = np.mean(window)
+            # assert mean is not np.nan
             bins.append((i, mean))
         self.bins = bins
 
