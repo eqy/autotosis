@@ -38,7 +38,7 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 300
+        self.box_width = 280
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
@@ -184,6 +184,8 @@ class Clip(object):
         chunksiz = 1.0/chunks
         for j in range(chunks):
             pred = second_preds[j]
+            if np.isnan(pred):
+                continue
             start = second + j*chunksiz
             end = start + chunksiz
             red = int(255*pred)
@@ -228,6 +230,9 @@ class Clip(object):
     def _trim(self, dest, start, end):
         input_stream = ffmpeg.input(self.filename)
         print(start, end)
+        # TODO: this part is exceptionally slow... seems like ffmpeg is
+        # processing all frames and then dropping the irrelevant ones
+        # when we just need 5-15 seconds of frames processed
         vid = (
             input_stream.video
             .trim(start=start, end=end)
@@ -365,7 +370,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(0, len(clips)):
+    for i in range(61, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
