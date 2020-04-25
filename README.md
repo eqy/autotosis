@@ -8,7 +8,7 @@ Compilations of these clips are entertaining (EXPLICIT language) [1](https://www
 From here, a fun experiment arises out of a few questions:
 - What's the minimal amount of data I need to get a model like ResNet-18 off-the-ground for a binary prediction task with clips?
 - What's the minimal amount of hardware I need to prototype such a model?
-- Can this be done fully automatically with no manual video editing?
+- Can we use this to generate highlight reels fully automatically with no manual video editing?
 
 In this case, I chose the binary task to be the one used to generate the Artosis videos (e.g., Rage or Not Rage), relying on his face cam as the only input data.
 It turns out that you need relatively few labels to get a model like ResNet-18 off the ground.
