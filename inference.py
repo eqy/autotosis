@@ -48,7 +48,7 @@ def main():
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         clip = Clip(tempconcatvideo)
-        clip.inference('checkpoint.pth.tar') 
+        clip.inference('model_best.pth.tar')
         os.unlink(tempvideolist)
         clip.bin()
         print(clip.bins)
