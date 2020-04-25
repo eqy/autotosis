@@ -15,15 +15,15 @@ def _join_videos(listpath, outputpath):
     )
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--prefix", help="prefix of file name to parse", required=True)
-    parser.add_argument("-n", "--name", help="name of output", required=True)
-    parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
-    args = parser.parse_args()
+def single_inference(args):
+    clip = Clip(args.single_inference)
+    clip.inference_frameskip = 2
+    clip.inference('model_best.pth.tar')
+    clip.generate_annotated(args.name)
 
+
+def highlights(args):
     paths = list()
-
     idx = 0
     while True:
         path = f'{args.prefix}{idx}.mp4'
@@ -57,14 +57,23 @@ def main():
     else:
         os.unlink(tempconcatvideo)
     
-    #clip.inference('model_best.pth.tar')
-    #clip.generate_annotated('test' + os.path.basename(test))
-    
-    #test = 'rawdata/whatthefrickvultures.mp4'
-    #test = 'rawdata/whatswrongwithyou.mp4'
-    #test = 'rawdata/amigonnamiss.mp4'
-    #test = 'rawdata/winningtolosing.mp4'
-    #test = 'testvods/artosis-works-on-fun-damentals0.mp4'
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--single-inference", help="file name for single full inference")
+    parser.add_argument("-p", "--prefix", help="prefix of file name to parse")
+    parser.add_argument("-n", "--name", help="name of output", required=True)
+    parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
+    args = parser.parse_args()
+
+
+    assert args.single_inference is not None or args.prefix is not None
+    if args.single_inference is not None:
+        single_inference(args)
+    else:
+        highlights(args) 
+
 
 
 
