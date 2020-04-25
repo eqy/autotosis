@@ -57,6 +57,12 @@ One major drawback of WSL is that there is no GPU/CUDA support, so ArtosisNet wa
 At a batch size of 32 and frugal input resolution of 128x128, ArtosisNet (with its ResNet-18-based architecture) takes approximately 2 seconds per batch when the machine is not busy with other tasks.
 Training for ~90 epochs takes several days on this machine. 
 
+
+Somewhat surprisingly, the current bottleneck seems to be the ffmepg encoding pipeline when extracting multiple highlight clips from an input video.
+My ffmpeg-fu is nonexistent, so I'm relying on an example posted in an issue thread on the ffmpeg-python repo [here](https://github.com/kkroening/ffmpeg-python/issues/184).
+While it works, there seems to be a lot of wasted processing on frames irrelevant to the final output, resulting to an end-to-end processing time of multiple hours for a ~5 hour stream session VOD on my slow machine.
+
+
 ### on splitting training/validation data
 One classical issue of classifying time-series data is managing the likelihood of high temporal redundancy of the data when attempting to estimate the performance of a model.
 This issue is a well-known problem in [neuroscience settings that collect EEG data](https://arxiv.org/abs/1812.07697).
