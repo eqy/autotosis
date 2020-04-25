@@ -5,7 +5,7 @@ These days I find myself ~~watching a lot of twitch streamers (e.g., [Artosis](t
 Artosis happens to have an extensive selection of high quality community-curated clips.
 Compilations of these clips are entertaining (EXPLICIT language) [1](https://www.youtube.com/watch?v=ykvlpUbGy6w) [2](https://www.youtube.com/watch?v=bBevrkgI5uc), but building them requires human eyeballs and effort.
 
-From here, a fun experiment from a few questions:
+From here, a fun experiment arises out of a few questions:
 - What's the minimal amount of data I need to get a model like ResNet-18 off-the-ground for a binary prediction task with clips?
 - What's the minimal amount of hardware I need to prototype such a model?
 - Can this be done fully automatically with no manual video editing?
@@ -18,6 +18,8 @@ Still, one issue that I didn't anticipate is that the "distribution" of frames i
 Community-sourced clips have a high likelihood of having rage or at least something interesting---they've been selected for a reason.
 However, VODs may have long periods of little to no interesting reactions from the streamer, and getting the false-positive rate of the model down can be tricky.
 I'm currently doing a long "student-teacher" manual loop: I run the model on a longer VOD (~a few hours of video), the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
+Another hack is to use precision as the validation criteria for selecting the best model instead of outright accuracy when the data is imbalanced.
+
 
 Here, "labeling" is just simply roughly annotating which segments of each clip corresponded to Rage Moments, and the corresponding frames for the model are extracted via `ffmpeg`.
 Note that this kind of labeling basically also causes the model to label smiling as rage, becuase there are some good rage moments where Artosis is laughing.
