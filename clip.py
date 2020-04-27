@@ -15,7 +15,7 @@ from artosisnet import get_inference_model, get_prediction
 INFERENCE_FRAMESKIP = 30
 DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
-
+# TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
     def __init__(self, filename, positive_segments=None,
                  face_bbox=DEFAULT_FACE_BBOX,
@@ -285,7 +285,7 @@ class Clip(object):
         rounded_framerate = int(self.framerate)
         max_idx = max(int((1.0-percentile)*n_bins), 1)
         selected_bins = sorted(top_bins[:max_idx], key=lambda item:item[0])
-
+        print(selected_bins)
         temp_clips = list()
         for i, b in enumerate(selected_bins):
             if b[0] in processed:
@@ -386,7 +386,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(69, len(clips)):
+    for i in range(78, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
