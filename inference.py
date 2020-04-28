@@ -69,7 +69,8 @@ def main():
     parser.add_argument("-p", "--prefix", help="prefix of file name to parse")
     parser.add_argument("-n", "--name", help="name of output", required=True)
     parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
-    parser.add_argument("--percentile", default=0.995, type=float)
+    parser.add_argument("--percentile", default=0.990, type=float)
+    parser.add_argument("--threshold", default=0.500, type=float)
     args = parser.parse_args()
 
 
@@ -78,8 +79,6 @@ def main():
         single_inference(args)
     else:
         highlights(args) 
-
-
 
 
 if __name__ == '__main__':

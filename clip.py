@@ -192,7 +192,7 @@ class Clip(object):
             green = int(255*(1.0-pred))
             fontcolor=f'{red:02x}{green:02x}00'
             x = 1920//2 - self.box_width//2
-            stream = stream.drawtext(text=f"rage: {pred:.3f}", x=x, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            stream = stream.drawtext(text=f"salt: {pred:.3f}", x=x, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -271,14 +271,15 @@ class Clip(object):
 
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, output_path='output.mp4', delete_temp=False):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', delete_temp=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
         basename = os.path.splitext(os.path.basename(self.filename))[0] + '_highlight'
         # sorted by percentile
-        top_bins = sorted(self.bins, key=lambda item:item[1], reverse=True)
+        threshold_bins = [item for item in self.bins if item[1] > threshold]
+        top_bins = sorted(threshold_bins, key=lambda item:item[1], reverse=True)
         # already output bin (times)
         processed = set()
         n_bins = len(top_bins)
@@ -386,7 +387,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(78, len(clips)):
+    for i in range(98, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
