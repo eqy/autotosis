@@ -52,7 +52,7 @@ def highlights(args):
         os.unlink(tempvideolist)
         clip.bin()
         print(clip.bins)
-        clip.generate_highlights(output_path=args.name, percentile=args.percentile, delete_temp=args.delete_temp)
+        clip.generate_highlights(output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
         os.unlink(tempconcatvideo)
     else:
         path = args.prefix
@@ -60,7 +60,7 @@ def highlights(args):
         clip.inference('model_best.pth.tar')
         clip.bin()
         print(clip.bins)
-        clip.generate_highlights(output_path=args.name, percentile=args.percentile, delete_temp=args.delete_temp)
+        clip.generate_highlights(output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
 
 
 def main():

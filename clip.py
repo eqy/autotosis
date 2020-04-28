@@ -275,14 +275,13 @@ class Clip(object):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
-
+        n_bins = len(self.bins)
         basename = os.path.splitext(os.path.basename(self.filename))[0] + '_highlight'
         # sorted by percentile
         threshold_bins = [item for item in self.bins if item[1] > threshold]
         top_bins = sorted(threshold_bins, key=lambda item:item[1], reverse=True)
         # already output bin (times)
         processed = set()
-        n_bins = len(top_bins)
         rounded_framerate = int(self.framerate)
         max_idx = max(int((1.0-percentile)*n_bins), 1)
         selected_bins = sorted(top_bins[:max_idx], key=lambda item:item[0])
