@@ -1,6 +1,7 @@
 ## timing data
 "End to end" pipeline:
 - ~2 hour VOD (in 1 hr chunks), inference on CPU, batch size 1, with training running in background: ~625mins/10+ hours at FRAMESKIP 15
+- ~4.5 hour VOD, inference on CPU, batch size 1, without training in background: ~259m/4+ hours at FRAMESKIP 30
 - 396 min at FRAMESKIP 30
 
 Frame extraction:
