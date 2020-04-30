@@ -38,7 +38,7 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 280
+        self.box_width = 260
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
@@ -378,15 +378,18 @@ def main():
     #    for clip in clips:
     #        csvwriter.writerow(clip.to_row())
 
+    filenames = set()
     clips = list()
     with open('data.csv', 'r') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=' ')
         for row in csvreader:
             clip = load_clip_from_csv_row(row)
+            assert clip.filename not in filenames
+            filenames.add(clip.filename)
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(0, len(clips)):
+    for i in range(123, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
