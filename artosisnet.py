@@ -180,7 +180,7 @@ def main_worker(gpu, ngpus_per_node, args):
             new_classifier = nn.Sequential(nn.Dropout(0.2), new_linear)
             model.classifier = new_classifier
         else:
-            raise ValueError("unsupported pretrained scale model...")
+            raise ValueError("unsupported pretrained model...")
     else:
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch](num_classes=2)
