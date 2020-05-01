@@ -50,7 +50,7 @@ In more detail, this includes:
 - Add data to data.csv
 - `python3 clip.py` to generate training data
 - `python3 artosisnet.py data -b 32` example to train (seems like only a few epochs are needed before overfitting)
-- `python3 inference -p input.mp4 -n output.mp4` example to generate highlights
+- `python3 inference -p input.mp4 -n output.mp4 --percentile 0.996 --threshold 0.70` example to generate highlights
 
 ## other technical fluff
 ### input processing
