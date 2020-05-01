@@ -13,7 +13,7 @@ import ffmpeg
 from artosisnet import get_inference_model, get_prediction
 
 INFERENCE_FRAMESKIP = 30
-DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
+DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
 
 # TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
