@@ -260,7 +260,7 @@ def main_worker(gpu, ngpus_per_node, args):
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
-            transforms.RandomResizedCrop(args.resolution, scale=(0.7, 1.0)),
+            transforms.RandomResizedCrop(args.resolution, scale=(0.5, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.Resize(args.resolution),
             transforms.ToTensor(),
@@ -302,8 +302,8 @@ def main_worker(gpu, ngpus_per_node, args):
         acc1, precision, recall = validate(val_loader, model, criterion, args)
 
         # remember best acc@1 and save checkpoint
-        # is_best = acc1 > best_acc1
-        is_best = precision > best_precision
+        is_best = acc1 > best_acc1
+        # is_best = precision > best_precision
         best_acc1 = max(acc1, best_acc1)
         best_precision = max(precision, best_precision)
 
