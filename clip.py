@@ -4,9 +4,11 @@ import os
 import subprocess
 import shutil
 import numpy as np
-from PIL import Image
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset
 from progress.bar import Bar
-
+from PIL import Image
 # 'ffmpeg-python', not 'ffmpeg' in pip
 import ffmpeg
 
@@ -14,6 +16,40 @@ from artosisnet import get_inference_model, get_prediction
 
 INFERENCE_FRAMESKIP = 30
 DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
+
+
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
+
+class InferenceFrames(Dataset):
+    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox):
+        self.jpg_filenames = jpg_filenames
+        self.crop = crop
+        self.output_resolution = output_resolution
+        self.face_bbox = face_bbox
+
+    def __len__(self):
+        return len(self.jpg_filenames)
+
+    def __getitem__(self, idx):
+        filename = self.jpg_filenames[idx]
+        im = Image.open(filename)
+        height = im.height
+        width = im.width
+        if self.crop:
+            im2 = im.crop((int(self.face_bbox[0]*width),
+                           int(self.face_bbox[1]*height),
+                           int(self.face_bbox[2]*width),
+                           int(self.face_bbox[3]*height)))
+            im2 = im2.resize((self.output_resolution, self.output_resolution))
+        else:
+            im2 = im.resize((self.output_resolution, self.output_resolution))
+        t = transforms.ToTensor()(im2)
+        t = normalize(t)
+        os.unlink(filename)
+        return t, idx
+
 
 # TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
@@ -110,13 +146,20 @@ class Clip(object):
                 bar.next()
         bar.finish()
 
-    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=128):
+    #def _inference_jpg(self, inference_model, jpg_filenames, crop, output_resolution):
+    #    ims = list()
+    #    for filename in jpg_filenames:
+    #    preds = get_prediction(ims, inference_model)
+    #    jpg_inference_results = [float(preds[i,1]) for i in range(len(ims))]
+    #    assert len(jpg_inference_results) == len(jpg_filenames)
+    #    return jpg_inference_results
+
+    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=128, batch_size=128):
         tempdir = 'temp/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
         inference_model = get_inference_model(model_path, arch)
-
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         rounded_framerate = int(np.round(self.framerate))
         assert rounded_framerate % self.inference_frameskip == 0
@@ -134,35 +177,58 @@ class Clip(object):
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
         for dirpath, dirnames, filenames in os.walk(tempdir):
             print(len(filenames))
-            bar = Bar('inference progress', max=len(filenames))
+            #batch_count = 0
+            jpg_filenames = list()
+            time_idxs = list()
+            true_frame_nums = list()
             for filename in filenames:
-                bar.next()
                 if basename not in filename:
                     continue
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
+                    #batch_count += 1
+                    jpg_filenames.append(os.path.join(dirpath, filename))
                     frame_num = int(name.split(basename)[1])
                     time = (frame_num - 1)/inference_fps
                     true_frame_num = int((frame_num - 1) * self.framerate/inference_fps)
                     time_idx = int(time)
-                    #dst = os.path.join(dest_path, label)
-                    #dst = os.path.join(dst, filename)
-                    src = os.path.join(dirpath, filename) 
-                    #shutil.move(src, src) 
-                    im = Image.open(src)
-                    height = im.height
-                    width = im.width
-                    if crop:
-                        im2 = im.crop((int(self.face_bbox[0]*width),
-                                       int(self.face_bbox[1]*height),
-                                       int(self.face_bbox[2]*width),
-                                       int(self.face_bbox[3]*height)))
-                        im2 = im2.resize((output_resolution, output_resolution))
-                    else:
-                        im2 = im.resize((output_resolution, output_resolution))
-                    pred = get_prediction(im2, inference_model)
-                    inference_results[time_idx].append((true_frame_num, float(pred[0,1])))
-                    os.unlink(os.path.join(dirpath, filename))
+                    time_idxs.append(time_idx)
+                    true_frame_nums.append(true_frame_num)
+                    #if batch_count == batch_size:
+                    #    assert len(time_idxs) == len(jpg_filenames)
+                    #    assert len(time_idxs) == len(true_frame_nums)
+                    #    batch_results = self._inference_jpg(inference_model, jpg_filenames, crop, output_resolution)
+                    #    for i, res in enumerate(batch_results): 
+                    #        inference_results[time_idxs[i]].append((true_frame_nums[i], res))
+                    #    batch_count = 0
+                    #    jpg_filenames = list()
+                    #    time_idxs = list()
+                    #    true_frame_nums = list()
+        assert len(jpg_filenames) == len(time_idxs)
+        assert len(true_frame_nums) == len(time_idxs)
+        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox)
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
+        print(len(dataset))
+        #for sample, 
+        bar = Bar('inference progress', max=len(jpg_filenames))
+        for samples, idxs in dataloader:
+            output = inference_model(samples)
+            preds = torch.softmax(output, 1)
+            for i in range(len(samples)): 
+                idx = idxs[i]
+                inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(preds[i][1])))
+                bar.next()
+        bar.finish()
+        #if batch_count:
+        #    print("finishing tail...")
+        #    batch_results = self._inference_jpg(inference_model, jpg_filenames, crop, output_resolution)
+        #    for i, res in enumerate(batch_results): 
+        #        inference_results[time_idxs[i]].append((true_frame_nums[i], res))
+        #    batch_count = 0
+        #    jpg_filenames = list()
+        #    time_idxs = list()
+        #    true_frame_nums = list()
+
         bar.finish()
         max_len = 0
         for i in range(len(inference_results)):
@@ -202,7 +268,7 @@ class Clip(object):
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
         x = 1920//2 - self.box_width//2
-        stream = stream.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='max')
+        stream = stream.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='fill')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -239,7 +305,7 @@ class Clip(object):
             .setpts('PTS-STARTPTS')
         )
         x = 1920//2 - self.box_width//2
-        vid = vid.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='max')
+        vid = vid.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='fill')
 
         for i in range(start, end):
             second_preds = self.inference_results[i]

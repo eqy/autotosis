@@ -117,13 +117,13 @@ def main():
     else:
         # Simply call main_worker function
         main_worker(args.gpu, ngpus_per_node, args)
-
+ 
 
 def get_inference_model(model_path, arch='resnet18'):
     print("=> creating model '{}'".format(arch))
     model = models.__dict__[arch](num_classes=2)
     if torch.cuda.device_count():
-        model.cuda()
+        model = torch.nn.DataParallel(model).cuda()
     print("=> loading checkpoint '{}'".format(model_path))
     checkpoint = torch.load(model_path)
     model.load_state_dict(checkpoint['state_dict'])
@@ -132,17 +132,15 @@ def get_inference_model(model_path, arch='resnet18'):
     model.eval()
     return model
 
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
 
-def get_prediction(img, model):
-    img = transforms.ToTensor()(img) 
-    img = normalize(img)
-    img = torch.unsqueeze(img, 0)
+def get_prediction(imgs, model):
+    imgs = [transforms.ToTensor()(img) for img in imgs]
+    imgs = [normalize(img) for img in imgs]
+    imgs = torch.stack(imgs)
     if torch.cuda.device_count():
-        img.cuda()
+        imgs.cuda()
     with torch.no_grad():
-        output = model(img)
+        output = model(imgs)
         output = torch.softmax(output, 1)
     return output
 
