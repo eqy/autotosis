@@ -228,8 +228,6 @@ class Clip(object):
         #    jpg_filenames = list()
         #    time_idxs = list()
         #    true_frame_nums = list()
-
-        bar.finish()
         max_len = 0
         for i in range(len(inference_results)):
             # sort each second by "true" frame number
