@@ -18,7 +18,7 @@ One issue that I didn't anticipate is that the "distribution" of frames is diffe
 Community-sourced clips have a high likelihood of having rage or at least something interesting---they've been selected for a reason.
 However, VODs may have long periods of little to no interesting reactions from the streamer, and getting the false-positive rate of the model down can be tricky.
 I'm currently doing a long ["student-teacher"](https://arxiv.org/abs/1911.04252) manual loop: I run the model on a longer VOD (~a few hours of video), the model gives back some segments it thinks are rage/interesting, and I add the segments that are clearly predicted incorrectly back into the training data.
-Another hack is to use precision as the validation criteria for selecting the best model instead of outright accuracy when the data is imbalanced.
+Another hack is to use precision as the validation criteria for selecting the best model instead of outright accuracy when the data is imbalanced, but this strategy is brittle as it can lead to models with very low recall (also useless).
 
 
 Here, "labeling" is just simply roughly annotating which segments of each clip corresponded to Rage Moments, and the corresponding frames for the model are extracted via `ffmpeg`.
@@ -65,6 +65,8 @@ One major drawback of WSL is that there is no GPU/CUDA support, so ArtosisNet wa
 At a batch size of 32 and frugal input resolution of 128x128, ArtosisNet (with its ResNet-18-based architecture) takes approximately 2 seconds per batch when the machine is not busy with other tasks.
 Training for ~90 epochs takes several days on this machine.
 Update: it seems that with the current amount of data, only two epochs of training are needed before the model starts overfitting, so prototyping with CPU training remains reasonably quick.
+Update 2: Having *slow* model training tying up my main desktop PC has gotten annoying enough that I invested in a "budget" training setup, R5 3600 + 2xP106-100 decommissioned mining GPUs from ebay.
+Total cost of the build shipped was < $1100.
 
 
 Somewhat surprisingly, the current bottleneck seems to be the ffmepg encoding pipeline when extracting multiple highlight clips from an input video.
