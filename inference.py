@@ -20,7 +20,7 @@ def _join_videos(listpath, outputpath):
 def single_inference(args):
     clip = Clip(args.single_inference)
     clip.inference_frameskip = 2
-    clip.inference('model_best.pth.tar')
+    clip.inference(args.model_path)
     clip.generate_annotated(args.name)
 
 
@@ -50,7 +50,7 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         clip = Clip(tempconcatvideo)
-        clip.inference('model_best.pth.tar')
+        clip.inference(args.model_path)
         os.unlink(tempvideolist)
         clip.bin()
         print(clip.bins)
@@ -59,7 +59,7 @@ def highlights(args):
     else:
         path = args.prefix
         clip = Clip(path)
-        clip.inference('model_best.pth.tar')
+        clip.inference(args.model_path)
         clip.bin()
         print(clip.bins)
         clip.generate_highlights(output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
@@ -71,6 +71,7 @@ def main():
     parser.add_argument("-p", "--prefix", help="prefix of file name to parse")
     parser.add_argument("-n", "--name", help="name of output", required=True)
     parser.add_argument("-d", "--delete-temp", help="delete temporary clips", action='store_true')
+    parser.add_argument("--model-path", help="path to model checkpoint", default='model_best.pth.tar')
     parser.add_argument("--percentile", default=0.990, type=float)
     parser.add_argument("--threshold", default=0.500, type=float)
     args = parser.parse_args()
