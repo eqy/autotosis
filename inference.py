@@ -19,7 +19,7 @@ def _join_videos(listpath, outputpath):
 
 def single_inference(args):
     clip = Clip(args.single_inference)
-    clip.inference_frameskip = 1
+    clip.inference_frameskip = 2
     clip.inference('model_best.pth.tar')
     clip.generate_annotated(args.name)
 
