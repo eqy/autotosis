@@ -154,7 +154,7 @@ class Clip(object):
     #    assert len(jpg_inference_results) == len(jpg_filenames)
     #    return jpg_inference_results
 
-    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=128, batch_size=128):
+    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=256, batch_size=64):
         tempdir = 'temp/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -453,7 +453,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(0, len(clips)):
+    for i in range(144, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
