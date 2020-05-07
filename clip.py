@@ -186,7 +186,6 @@ class Clip(object):
                     continue
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
-                    #batch_count += 1
                     jpg_filenames.append(os.path.join(dirpath, filename))
                     frame_num = int(name.split(basename)[1])
                     time = (frame_num - 1)/inference_fps
@@ -194,22 +193,11 @@ class Clip(object):
                     time_idx = int(time)
                     time_idxs.append(time_idx)
                     true_frame_nums.append(true_frame_num)
-                    #if batch_count == batch_size:
-                    #    assert len(time_idxs) == len(jpg_filenames)
-                    #    assert len(time_idxs) == len(true_frame_nums)
-                    #    batch_results = self._inference_jpg(inference_model, jpg_filenames, crop, output_resolution)
-                    #    for i, res in enumerate(batch_results): 
-                    #        inference_results[time_idxs[i]].append((true_frame_nums[i], res))
-                    #    batch_count = 0
-                    #    jpg_filenames = list()
-                    #    time_idxs = list()
-                    #    true_frame_nums = list()
         assert len(jpg_filenames) == len(time_idxs)
         assert len(true_frame_nums) == len(time_idxs)
         dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
         print(len(dataset))
-        #for sample, 
         bar = Bar('inference progress', max=len(jpg_filenames))
         for samples, idxs in dataloader:
             output = inference_model(samples)
@@ -219,15 +207,6 @@ class Clip(object):
                 inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(preds[i][1])))
                 bar.next()
         bar.finish()
-        #if batch_count:
-        #    print("finishing tail...")
-        #    batch_results = self._inference_jpg(inference_model, jpg_filenames, crop, output_resolution)
-        #    for i, res in enumerate(batch_results): 
-        #        inference_results[time_idxs[i]].append((true_frame_nums[i], res))
-        #    batch_count = 0
-        #    jpg_filenames = list()
-        #    time_idxs = list()
-        #    true_frame_nums = list()
         max_len = 0
         for i in range(len(inference_results)):
             # sort each second by "true" frame number
