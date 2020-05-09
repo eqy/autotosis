@@ -28,6 +28,7 @@ Note that this kind of labeling basically also causes the model to label smiling
 All my other machines (that have GPUs) are currently busy at the moment doing "real" work, so I tried training this ResNet-18 on my ancient i5-3570K (it doesn't even have AVX2 extensions!) machine.
 However, it turns out that this is still fast enough to train a 128x128 input resolution model.
 For longer video clips, inference can be "sped up" by subsampling the video (e.g., predictions at << 60 fps).
+(Update: I've started training a 256x256 version of ResNet-18 on a decomissioned P106-100 mining GPU I got from ebay for $80)
 
 
 Finally, `ffmpeg` remains clunky but powerful and fast (for most tasks), and it was wholly able to accomplish all of the tasks needed to train the model, ingest video for predictions, and re-slice videos to automatically generate highlight compilations.
@@ -36,6 +37,12 @@ In more detail, this includes:
 - Overlaying dynamic text at a fine granuarlity to video clips
 - Trimming long videos to regions of interest according to model predictions
 - Concatenating clips of interest into longer highlight reels.
+
+
+One remaining issue is that of choosing when to cut/trim clips.
+Currently, autotosis just uses hard 5-second boundaries for binning and trimming video segments, but this can create jarring cuts when things don't align well with 5-second intervals.
+It may be possible to use some handcrafted heuristics to smooth things out (e.g., by tracking audio levels or monitoring the predictions of the model in a fine-grained way), but for now the focus is mainly on improving the prediction quality to generate usable highlight reels.
+
 
 ## Dependencies
 - python 3.6
@@ -53,6 +60,7 @@ In more detail, this includes:
 - `python3 inference -p input.mp4 -n output.mp4 --percentile 0.996 --threshold 0.70` example to generate highlights
 
 ## Testing Results
+- 2002/05/09 ResNet-18 256x256 best val acc ~94.8% (256x256 source, with mostly more neg examples)
 - 2020/05/07 ResNet-18 256x256 best val acc ~94.0% (256x256 source, with more neg examples)
 - 2020/05/06 ResNet-18 256x256 best val acc ~91.9% (using 512x512 source images)
 - 2020/05/04 ResNet-18 256x256 best val acc ~92.7% (using 256x256 source images)
