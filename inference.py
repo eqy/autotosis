@@ -21,6 +21,8 @@ def single_inference(args):
     clip = Clip(args.single_inference)
     clip.inference_frameskip = 6
     clip.inference(args.model_path)
+    if args.benchmark:
+        return
     clip.generate_annotated(args.name)
 
 
