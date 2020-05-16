@@ -319,7 +319,7 @@ class Clip(object):
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
         n_bins = len(self.bins)
-        basename = os.path.splitext(os.path.basename(self.filename))[0] + '_highlight'
+        basename = os.path.splitext(os.path.basename(self.filename))[0] + '_h'
         # sorted by percentile
         threshold_bins = [item for item in self.bins if item[1] > threshold]
         top_bins = sorted(threshold_bins, key=lambda item:item[1], reverse=True)
@@ -432,7 +432,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(144, len(clips)):
+    for i in range(178, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
