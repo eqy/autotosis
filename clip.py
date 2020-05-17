@@ -432,7 +432,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(178, len(clips)):
+    for i in range(0, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
