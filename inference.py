@@ -52,6 +52,7 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         clip = Clip(tempconcatvideo)
+        clip.inference_frameskip = 4 
         clip.inference(args.model_path)
         os.unlink(tempvideolist)
         if args.benchmark:
@@ -63,6 +64,7 @@ def highlights(args):
     else:
         path = args.prefix
         clip = Clip(path)
+        clip.inference_frameskip = 4
         clip.inference(args.model_path)
         if args.benchmark:
             return
