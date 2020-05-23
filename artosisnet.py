@@ -20,6 +20,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
+from torchnet.meter import APMeter
+
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
@@ -58,6 +60,8 @@ parser.add_argument('-p', '--print-freq', default=100, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--prefix', default='', type=str,
+                    help='prefix for checkpoint names')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -318,7 +322,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'best_acc1': best_acc1,
                 'best_precision': best_precision,
                 'optimizer' : optimizer.state_dict(),
-            }, is_best)
+            }, is_best, args)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
@@ -328,9 +332,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     top1 = AverageMeter('Acc@1', ':6.2f')
     precision = AverageMeter('Precis:', ':1.6f')
     recall = AverageMeter('Recall:', ':1.6f')
+    average_precision = APMeter()
+    average_precision_wrapper = APMeterWrapper(average_precision)
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, top1, precision, recall],
+        [batch_time, data_time, losses, top1, average_precision_wrapper],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -354,13 +360,16 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         acc1, prec, rec, prec_weight, rec_weight = accuracy(output, target)
         losses.update(loss.detach().item(), images.size(0))
         top1.update(acc1, images.size(0))
-        precision.update(prec, prec_weight)
-        recall.update(rec, rec_weight)
+        #precision.update(prec, prec_weight)
+        #recall.update(rec, rec_weight)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        with torch.no_grad():
+            average_precision.add(output[:,1], (target==1).float())
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -376,10 +385,12 @@ def validate(val_loader, model, criterion, args):
     top1 = AverageMeter('Acc@1', ':6.2f')
     precision = AverageMeter('Precis:', ':1.6f')
     recall = AverageMeter('Recall:', ':1.6f')
+    average_precision = APMeter()
+    average_precision_meter = APMeterWrapper(average_precision)
 
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, precision, recall],
+        [batch_time, losses, top1, average_precision_meter],
         prefix='Test: ')
 
     # switch to evaluate mode
@@ -402,8 +413,10 @@ def validate(val_loader, model, criterion, args):
             acc1, prec, rec, prec_weight, rec_weight = accuracy(output, target)
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
-            precision.update(prec, prec_weight)
-            recall.update(rec, rec_weight)
+            #precision.update(prec, prec_weight)
+            #recall.update(rec, rec_weight)
+
+            average_precision.add(output[:,1], (target==1).float())
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -413,16 +426,16 @@ def validate(val_loader, model, criterion, args):
                 progress.display(i)
 
         # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f} Precision {precision.avg:.3f} Recall {recall.avg:.3f}'
-              .format(top1=top1, precision=precision, recall=recall))
+        print(' * Acc@1 {top1.avg:.3f} Average Precision {ap:.3f}'
+              .format(top1=top1, ap=average_precision.value()[0]))
 
     return top1.avg, precision.avg, recall.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, args, filename='checkpoint.pth.tar'):
+    torch.save(state, args.prefix + filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filename, args.prefix + 'model_best.pth.tar')
 
 
 class AverageMeter(object):
@@ -449,6 +462,17 @@ class AverageMeter(object):
     def __str__(self):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
+
+
+class APMeterWrapper(object):
+    def __init__(self, apmeter):
+        self.apmeter = apmeter
+
+    def __str__(self):
+        print("compute")
+        val = self.apmeter.value()
+        print("done")
+        return f'Average Precision: {val[0]:3f}'
 
 
 class ProgressMeter(object):
