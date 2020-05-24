@@ -163,7 +163,7 @@ class Clip(object):
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         rounded_framerate = int(np.round(self.framerate))
         assert rounded_framerate % self.inference_frameskip == 0
-        res_str = f'{self.width//2}x{self.height//2}'
+        res_str = f'{self.width}x{self.height}'
         inference_fps = int(np.round(self.framerate/self.inference_frameskip))
         fps_str = f'fps={inference_fps}'
         jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')

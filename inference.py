@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 from clip import Clip
+import random
 
 import ffmpeg
 
@@ -20,7 +21,7 @@ def _join_videos(listpath, outputpath):
 def single_inference(args):
     clip = Clip(args.single_inference)
     clip.inference_frameskip = 6
-    clip.inference(args.model_path, arch=args.arch)
+    clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
     if args.benchmark:
         return
     clip.generate_annotated(args.name)
@@ -44,7 +45,7 @@ def highlights(args):
 
     if len(paths) >= 1:
         print("joining videos...")
-        tempvideolist = 'tempvideolist'
+        tempvideolist = 'tempvideolist' + str(random.randint(0,2**32))
         basename = os.path.splitext(args.name)[0]
         tempconcatvideo = f'temp{basename}.mp4'
         with open(tempvideolist, 'w') as f:
@@ -53,24 +54,24 @@ def highlights(args):
         _join_videos(tempvideolist, tempconcatvideo)
         clip = Clip(tempconcatvideo)
         clip.inference_frameskip = 4 
-        clip.inference(args.model_path, arch=args.arch)
-        os.unlink(tempvideolist)
+        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
         print(clip.bins)
-        clip.generate_highlights(output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
+        clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
         os.unlink(tempconcatvideo)
+        os.unlink(tempvideolist)
     else:
         path = args.prefix
         clip = Clip(path)
         clip.inference_frameskip = 4
-        clip.inference(args.model_path, arch=args.arch)
+        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
         print(clip.bins)
-        clip.generate_highlights(output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
+        clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp)
 
 
 def main():
@@ -85,6 +86,7 @@ def main():
     parser.add_argument("--percentile", default=0.990, type=float)
     parser.add_argument("--threshold", default=0.500, type=float)
     parser.add_argument("--bin-size", default=5, type=int)
+    parser.add_argument("--batch-size", default=32, type=int)
     args = parser.parse_args()
 
 
