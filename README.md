@@ -60,6 +60,7 @@ It may be possible to use some handcrafted heuristics to smooth things out (e.g.
 - `python3 inference -p input.mp4 -n output.mp4 --percentile 0.996 --threshold 0.70` example to generate highlights
 
 ## Testing Results
+- 2020/05/23 ResNet-50 256x256 best val acc ~90.4% AP 0.930 (256x256 source, with more neg/pos examples)
 - 2020/05/12 ResNet-18 256x256 best val acc ~92.0% (256x256 source, with more neg/pos examples)
 - 2020/05/09 ResNet-18 256x256 best val acc ~94.8% (256x256 source, with mostly more neg examples)
 - 2020/05/07 ResNet-18 256x256 best val acc ~94.0% (256x256 source, with more neg examples)
