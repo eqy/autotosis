@@ -426,7 +426,7 @@ def validate(val_loader, model, criterion, args):
                 progress.display(i)
 
         # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f} Average Precision {ap:.3f}'
+        print(' * Acc@1 {top1.avg:.3f} AP: {ap:.3f}'
               .format(top1=top1, ap=average_precision.value()[0]))
 
     return top1.avg, precision.avg, recall.avg
@@ -472,7 +472,7 @@ class APMeterWrapper(object):
         print("compute")
         val = self.apmeter.value()
         print("done")
-        return f'Average Precision: {val[0]:3f}'
+        return f'AP: {val[0]:3f}'
 
 
 class ProgressMeter(object):
