@@ -22,29 +22,55 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
+def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blackout_dims=None, concat_full=False, sound_filename=None):
+    im = Image.open(filename)
+    if blackout_dims is not None:
+        box = Image.new('RGB', (blackout_dims[2], blackout_dims[3]), 'black')
+        im.paste(box, (blackout_dims[0], blackout_dims[1]))
+    height = im.height
+    width = im.width
+    if crop:
+        im2 = im.crop((int(crop_bbox[0]*width),
+                       int(crop_bbox[1]*height),
+                       int(crop_bbox[2]*width),
+                       int(crop_bbox[3]*height)))
+        im2 = im2.resize((output_resolution, output_resolution))
+        im3 = im.resize((output_resolution, output_resolution))
+        # include the full frame in the data by concating it to the crop
+        if concat_full:
+            new_img = Image.new('RGB', (output_resolution, 2*output_resolution))
+            new_img.paste(im2)
+            new_img.paste(im3, (0, output_resolution))
+            im2 = new_img
+    else:
+        im2 = im.resize((output_resolution, output_resolution))
+    if sound_filename is not None:
+        new_img = Image.new("RGB", (output_resolution, im2.size[1] + output_resolution))
+        new_img.paste(im2)
+        sound_img = Image.open(sound_filename)
+        new_img.paste(sound_img, (0, im2.size[1]))
+        im2 = new_img
+    return im2
+
+
 class InferenceFrames(Dataset):
-    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox):
+    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox, sound_filenames):
         self.jpg_filenames = jpg_filenames
         self.crop = crop
         self.output_resolution = output_resolution
         self.face_bbox = face_bbox
+        self.use_sound = use_sound
+        self.sound_filenames = sound_filenames
 
     def __len__(self):
         return len(self.jpg_filenames)
 
     def __getitem__(self, idx):
         filename = self.jpg_filenames[idx]
-        im = Image.open(filename)
-        height = im.height
-        width = im.width
-        if self.crop:
-            im2 = im.crop((int(self.face_bbox[0]*width),
-                           int(self.face_bbox[1]*height),
-                           int(self.face_bbox[2]*width),
-                           int(self.face_bbox[3]*height)))
-            im2 = im2.resize((self.output_resolution, self.output_resolution))
-        else:
-            im2 = im.resize((self.output_resolution, self.output_resolution))
+        sound_filename = None
+        if sound_filenames is not None:
+            sound_filename = self.sound_filenames[idx]
+        im2 = frame_to_img(filename, self.output_resolution, self.crop, self.face_bbox, sound_filename=sound_filename)
         t = transforms.ToTensor()(im2)
         t = normalize(t)
         os.unlink(filename)
@@ -75,6 +101,7 @@ class Clip(object):
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
         self.box_width = 260
+        self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
@@ -95,24 +122,33 @@ class Clip(object):
         )
         return out
 
-    def generate_data2(self, dest_path, crop=True, output_resolution=256):
+    def generate_data2(self, dest_path, crop=True, output_resolution=256, concat_full=True, use_sound=True):
         # unload all of the frames even if it's extra work because crap is fast
         # TODO support frameskip? (or not because maybe more data is just better)
         pos_path = os.path.join(dest_path, '1')
         neg_path = os.path.join(dest_path, '0')
+        sound_path = os.path.join(dest_path, 'sound')
 
         if not os.path.exists(pos_path):
             os.makedirs(pos_path)
         if not os.path.exists(neg_path):
             os.makedirs(neg_path)
+        if not os.path.exists(sound_path):
+            os.makedirs(sound_path)
 
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         fps_str = f'fps={str(int(self.framerate))}'
         jpeg_str = os.path.join(dest_path, f'{basename}_%d.jpg')
-        basename = basename + '_'
+        sound_jpeg_str = os.path.join(sound_path, f'{basename}_sound_%d.jpg')
+        newbasename = basename + '_'
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
-        subprocess.call(ffmpeg_cmd) 
+        subprocess.call(ffmpeg_cmd)
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        subprocess.call(ffmpeg_spectro_cmd)
+        ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
+        subprocess.call(ffmpeg_sound_cmd)
+        os.unlink(f'{basename}_sound.mp4')
         for dirpath, dirnames, filenames in os.walk(dest_path):
             if dirpath == pos_path or dirpath == neg_path:
                 continue
@@ -120,7 +156,9 @@ class Clip(object):
             for filename in filenames:
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
-                    frame_num = int(name.split(basename)[1]) - 1
+                    if '_sound_' in filename:
+                        continue
+                    frame_num = int(name.split(newbasename)[1]) - 1
                     time = frame_num/self.framerate
                     label = '0'
                     for interval in self.positive_segments:
@@ -134,15 +172,13 @@ class Clip(object):
                     im = Image.open(dst)
                     height = im.height
                     width = im.width
-                    if crop:
-                        im2 = im.crop((int(self.face_bbox[0]*width),
-                                       int(self.face_bbox[1]*height),
-                                       int(self.face_bbox[2]*width),
-                                       int(self.face_bbox[3]*height)))
-                        im2 = im2.resize((output_resolution, output_resolution))
-                    else:
-                        im2 = im.resize((output_resolution, output_resolution))
-                    im2.save(dst)
+                    blackout_dims = [1920//2 - self.box_width//2, 900, self.box_width, self.box_height]
+                    sound_dst = None
+                    if use_sound:
+                        sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + 1}.jpg')
+                        assert os.path.exists(sound_dst)
+                    im2 = frame_to_img(dst, output_resolution, crop, self.face_bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
+                    im2.save(dst, quality=95)
                 bar.next()
         bar.finish()
 
@@ -154,7 +190,7 @@ class Clip(object):
     #    assert len(jpg_inference_results) == len(jpg_filenames)
     #    return jpg_inference_results
 
-    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=256, batch_size=64):
+    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True):
         tempdir = 'temp/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -167,35 +203,54 @@ class Clip(object):
         inference_fps = int(np.round(self.framerate/self.inference_frameskip))
         fps_str = f'fps={inference_fps}'
         jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
-        basename = basename + '_'
+        sound_jpeg_str = os.path.join(tempdir, f'{basename}_sound_%d.jpg')
+        newbasename = basename + '_'
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
-        subprocess.call(ffmpeg_cmd) 
+        subprocess.call(ffmpeg_cmd)
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        subprocess.call(ffmpeg_spectro_cmd)
+        ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
+        subprocess.call(ffmpeg_sound_cmd)
+        os.unlink(f'{basename}_sound.mp4')
+
         print("duration:", self.duration)
           
         inference_results = None
         inference_results = [list() for i in range(int(np.ceil(self.duration)))]
+        sound_filenames = None
+        
+        jpg_filenames = list()
+        time_idxs = list()
+        true_frame_nums = list()
+        if use_sound:
+            sound_filenames = list()
+
         for dirpath, dirnames, filenames in os.walk(tempdir):
             print(len(filenames))
             #batch_count = 0
-            jpg_filenames = list()
-            time_idxs = list()
-            true_frame_nums = list()
             for filename in filenames:
-                if basename not in filename:
+                if newbasename not in filename:
                     continue
                 name, ext = os.path.splitext(filename)
                 if ext == '.jpg':
+                    if '_sound_' in filename:
+                        continue
                     jpg_filenames.append(os.path.join(dirpath, filename))
-                    frame_num = int(name.split(basename)[1])
-                    time = (frame_num - 1)/inference_fps
-                    true_frame_num = int((frame_num - 1) * self.framerate/inference_fps)
+                    frame_num = int(name.split(newbasename)[1]) - 1
+                    if sound_filenames is not None:
+                        sound_filenames.append(os.path.join(dirpath, f'{basename}_sound_{framenum+1}.jpg'))
+                        assert os.path.exists(sound_filenames[-1])
+                    time = (frame_num)/inference_fps
+                    true_frame_num = int((frame_num) * self.framerate/inference_fps)
                     time_idx = int(time)
                     time_idxs.append(time_idx)
                     true_frame_nums.append(true_frame_num)
         assert len(jpg_filenames) == len(time_idxs)
         assert len(true_frame_nums) == len(time_idxs)
-        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox)
+
+
+        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox, concat_full=concat_full, sound_filenames=sound_filenames)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
         print(len(dataset))
         bar = Bar('inference progress', max=len(jpg_filenames))
@@ -245,7 +300,7 @@ class Clip(object):
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
         x = 1920//2 - self.box_width//2
-        stream = stream.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='fill')
+        stream = stream.drawbox(x=x, y=900, height=self.box_height, width=self.box_width, color='black', t='fill')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -282,7 +337,7 @@ class Clip(object):
             .setpts('PTS-STARTPTS')
         )
         x = 1920//2 - self.box_width//2
-        vid = vid.drawbox(x=x, y=900, height=80, width=self.box_width, color='black', t='fill')
+        vid = vid.drawbox(x=x, y=900, height=self.box_height, width=self.box_width, color='black', t='fill')
 
         for i in range(start, end):
             second_preds = self.inference_results[i]
@@ -432,7 +487,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(226, len(clips)):
+    for i in range(0, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
