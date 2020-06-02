@@ -21,6 +21,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 
 from torchnet.meter import APMeter
+from artosisnet_transforms import PartialRandomResizedCrop
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -266,9 +267,10 @@ def main_worker(gpu, ngpus_per_node, args):
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
+            #transforms.RandomResizedCrop(args.resolution, scale=(0.8, 1.0)),
             transforms.RandomResizedCrop(args.resolution, scale=(0.5, 1.0)),
-            transforms.RandomHorizontalFlip(),
-            transforms.Resize(args.resolution),
+            #transforms.RandomHorizontalFlip(),
+            #transforms.Resize(args.resolution),
             transforms.ToTensor(),
             normalize,
         ]))
