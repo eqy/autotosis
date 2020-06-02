@@ -1,3 +1,4 @@
+import argparse
 import ast
 import csv
 import os
@@ -48,6 +49,7 @@ def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blacko
         new_img = Image.new("RGB", (output_resolution, im2.size[1] + output_resolution))
         new_img.paste(im2)
         sound_img = Image.open(sound_filename)
+        sound_img = sound_img.resize((output_resolution, output_resolution))
         new_img.paste(sound_img, (0, im2.size[1]))
         im2 = new_img
     return im2
@@ -73,7 +75,6 @@ class InferenceFrames(Dataset):
         im2 = frame_to_img(filename, self.output_resolution, self.crop, self.face_bbox, sound_filename=sound_filename)
         t = transforms.ToTensor()(im2)
         t = normalize(t)
-        os.unlink(filename)
         return t, idx
 
 
@@ -144,11 +145,12 @@ class Clip(object):
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-q:v', '1', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd)
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        temp_spectro_path = os.path.join(sound_path, f'{basename}_sound.mp4')
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop=8000,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', temp_spectro_path]
         subprocess.call(ffmpeg_spectro_cmd)
-        ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
+        ffmpeg_sound_cmd = ['ffmpeg', '-i', temp_spectro_path, '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
         subprocess.call(ffmpeg_sound_cmd)
-        os.unlink(f'{basename}_sound.mp4')
+        os.unlink(temp_spectro_path)
         for dirpath, dirnames, filenames in os.walk(dest_path):
             if dirpath == pos_path or dirpath == neg_path:
                 continue
@@ -175,13 +177,17 @@ class Clip(object):
                     blackout_dims = [1920//2 - self.box_width//2, 900, self.box_width, self.box_height]
                     sound_dst = None
                     if use_sound:
-                        sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + 1}.jpg')
-                        assert os.path.exists(sound_dst)
+                        offset = 1
+                        sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + offset}.jpg')
+                        while not os.path.exists(sound_dst):
+                            offset -= 1
+                            sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + offset}.jpg')
+                            assert offset > -10, f'could not find {basename}_sound_{frame_num + 1}.jpg'
                     im2 = frame_to_img(dst, output_resolution, crop, self.face_bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
                     im2.save(dst, quality=95)
                 bar.next()
         bar.finish()
-
+        shutil.rmtree(sound_path)
     #def _inference_jpg(self, inference_model, jpg_filenames, crop, output_resolution):
     #    ims = list()
     #    for filename in jpg_filenames:
@@ -208,7 +214,7 @@ class Clip(object):
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd)
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop=8000,format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
         subprocess.call(ffmpeg_spectro_cmd)
         ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
         subprocess.call(ffmpeg_sound_cmd)
@@ -239,7 +245,12 @@ class Clip(object):
                     jpg_filenames.append(os.path.join(dirpath, filename))
                     frame_num = int(name.split(newbasename)[1]) - 1
                     if sound_filenames is not None:
-                        sound_filenames.append(os.path.join(dirpath, f'{basename}_sound_{framenum+1}.jpg'))
+                        sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
+                        while not os.path.exists(sound_filename):
+                            offset -= 1
+                            sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
+                            assert offset > -10, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                        sound_filenames.append(sound_filename)
                         assert os.path.exists(sound_filenames[-1])
                     time = (frame_num)/inference_fps
                     true_frame_num = int((frame_num) * self.framerate/inference_fps)
@@ -276,6 +287,7 @@ class Clip(object):
                 while len(inference_results[i]) < max_len:
                     inference_results[i].append(mean)
         self.inference_results = inference_results
+        shutil.rmtree(tempdir)
 
     def _drawtext(self, stream, second, second_preds):
         chunks = len(second_preds)
@@ -475,6 +487,11 @@ def main():
     #    csvwriter = csv.writer(csvfile, delimiter=' ')
     #    for clip in clips:
     #        csvwriter.writerow(clip.to_row())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", help="output data directory", default='data')
+    parser.add_argument("--sound", help="sound", action='store_true')
+    parser.add_argument("-r", "--resolution", help="resolution", default=256, type=int)
+    args = parser.parse_args()
 
     filenames = set()
     clips = list()
@@ -491,13 +508,13 @@ def main():
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
-                clips[i].generate_data2('data/val')
+                clips[i].generate_data2(os.path.join(args.d, 'val'), use_sound=args.sound, output_resolution=args.resolution)
             else:
-                clips[i].generate_data2('data/train')
+                clips[i].generate_data2(os.path.join(args.d, 'train'), use_sound=args.sound, output_resolution=args.resolution)
         elif i % 4 == 0:
-            clips[i].generate_data2('data/val')
+            clips[i].generate_data2(os.path.join(args.d, 'val'), use_sound=args.sound, output_resolution=args.resolution)
         else:
-            clips[i].generate_data2('data/train')
+            clips[i].generate_data2(os.path.join(args.d, 'train'), use_sound=args.sound, output_resolution=args.resolution)
 
 
 if __name__ == '__main__':
