@@ -70,6 +70,12 @@ It may be possible to use some handcrafted heuristics to smooth things out (e.g.
 - 2020/05/04 ResNet-18 128x128 best val acc ~91%
 - 2020/05/04 ResNet-50 128x128 best val acc ~90.9%
 
+## Testing TODOs (hyperparameters to tune)
+- Removing normalization (usually for natural images, but might negatively affect spectrogram)
+- Spectrogram cutoff frequency (currently 8KHz, but can we go down to 4/3KHz?)
+- Resolution ?? 384px wide, 512px wide? (384+ is the limit of 6GB GPUs basically)
+- Removing full screen view?
+
 ## other technical fluff
 ### input processing
 I'm not very familiar with torchvision's [video offerings](https://pytorch.org/docs/stable/torchvision/io.html), so autotosis is built off the back of ffmpeg and PIL.
