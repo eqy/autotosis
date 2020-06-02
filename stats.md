@@ -9,6 +9,10 @@ Frame extraction:
 - frameskip=4, one-by-one: >> 15 minutes for single video
 - frameskip=1, postprocessing: ~ <= 1 minute for single video/clip
 
+## training time
+- Throttling 1060: 512x256 : 0.562s per batch at batch size 32
+- Throttling 1060: 768x256 : 1.060s per batch at batch size 32
+
 ## dataset size
 - 2020/5/08 168 videos, train: 137257 individual images (92982 neg, 44275 pos), val: 30692 (22625 eg, 8067 pos)
 - 2020/4/30 144 videos, train: 121657 individual images (77705 neg, 43952 pos), val: 26227 (18160 neg, 8067 pos)
