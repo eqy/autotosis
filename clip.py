@@ -490,6 +490,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", help="output data directory", default='data')
     parser.add_argument("--sound", help="sound", action='store_true')
+    parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("-r", "--resolution", help="resolution", default=256, type=int)
     args = parser.parse_args()
 
@@ -508,13 +509,27 @@ def main():
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
-                clips[i].generate_data2(os.path.join(args.d, 'val'), use_sound=args.sound, output_resolution=args.resolution)
+                clips[i].generate_data2(os.path.join(args.d, 'val'),
+                                        use_sound=args.sound,
+                                        output_resolution=args.resolution,
+                                        concat_full=args.concat_full)
             else:
-                clips[i].generate_data2(os.path.join(args.d, 'train'), use_sound=args.sound, output_resolution=args.resolution)
+                clips[i].generate_data2(os.path.join(args.d, 'train'),
+                                        use_sound=args.sound,
+                                        output_resolution=args.resolution,
+                                        concat_full=args.concat_full)
+        # want determinism in generating datasets to support partial re-generation
+        # / non-destructive over-writing
         elif i % 4 == 0:
-            clips[i].generate_data2(os.path.join(args.d, 'val'), use_sound=args.sound, output_resolution=args.resolution)
+            clips[i].generate_data2(os.path.join(args.d, 'val'),
+                                    use_sound=args.sound,
+                                    output_resolution=args.resolution,
+                                    concat_full=args.concat_full)
         else:
-            clips[i].generate_data2(os.path.join(args.d, 'train'), use_sound=args.sound, output_resolution=args.resolution)
+            clips[i].generate_data2(os.path.join(args.d, 'train'),
+                                    use_sound=args.sound,
+                                    output_resolution=args.resolution,
+                                    concat_full=args.concat_full)
 
 
 if __name__ == '__main__':
