@@ -259,6 +259,13 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
+    segments = 2
+    if 'noconcat' in args.data:
+        segments = 1
+        print("not using full concat...", f"segments={segments}")
+    else:
+        print("using full concat...", f"segments={segments}")
+
     traindir = os.path.join(args.data, 'train')
     valdir = os.path.join(args.data, 'val')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -268,7 +275,7 @@ def main_worker(gpu, ngpus_per_node, args):
         traindir,
         transforms.Compose([
             #transforms.RandomResizedCrop(args.resolution, scale=(0.8, 1.0)),
-            PartialRandomResizedCrop(args.resolution, scale=(0.5, 1.0)),
+            PartialRandomResizedCrop(args.resolution, scale=(0.5, 1.0), segments=segments),
             #transforms.RandomHorizontalFlip(),
             #transforms.Resize(args.resolution),
             transforms.ToTensor(),
@@ -497,6 +504,7 @@ class ProgressMeter(object):
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     lr = args.lr * (0.1 ** (epoch // args.ld))
+    print(f"lr set to: {lr}")
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
