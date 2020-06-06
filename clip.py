@@ -56,12 +56,12 @@ def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blacko
 
 
 class InferenceFrames(Dataset):
-    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox, sound_filenames):
+    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox, concat_full, sound_filenames):
         self.jpg_filenames = jpg_filenames
         self.crop = crop
         self.output_resolution = output_resolution
         self.face_bbox = face_bbox
-        self.use_sound = use_sound
+        self.use_sound = sound_filenames is not None
         self.sound_filenames = sound_filenames
 
     def __len__(self):
@@ -70,7 +70,7 @@ class InferenceFrames(Dataset):
     def __getitem__(self, idx):
         filename = self.jpg_filenames[idx]
         sound_filename = None
-        if sound_filenames is not None:
+        if self.sound_filenames is not None:
             sound_filename = self.sound_filenames[idx]
         im2 = frame_to_img(filename, self.output_resolution, self.crop, self.face_bbox, sound_filename=sound_filename)
         t = transforms.ToTensor()(im2)
@@ -245,6 +245,7 @@ class Clip(object):
                     jpg_filenames.append(os.path.join(dirpath, filename))
                     frame_num = int(name.split(newbasename)[1]) - 1
                     if sound_filenames is not None:
+                        offset = 1
                         sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
                         while not os.path.exists(sound_filename):
                             offset -= 1

@@ -21,7 +21,7 @@ def _join_videos(listpath, outputpath):
 def single_inference(args):
     clip = Clip(args.single_inference)
     clip.inference_frameskip = 6
-    clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
+    clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
     if args.benchmark:
         return
     clip.generate_annotated(args.name)
@@ -54,7 +54,7 @@ def highlights(args):
         _join_videos(tempvideolist, tempconcatvideo)
         clip = Clip(tempconcatvideo)
         clip.inference_frameskip = 4 
-        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
+        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
@@ -66,7 +66,7 @@ def highlights(args):
         path = args.prefix
         clip = Clip(path)
         clip.inference_frameskip = 4
-        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size)
+        clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
@@ -83,6 +83,8 @@ def main():
     parser.add_argument("-b", "--benchmark", help="benchmark mode", action='store_true')
     parser.add_argument("--model-path", help="path to model checkpoint", default='model_best.pth.tar')
     parser.add_argument("-a", "--arch", help="model architecture to use", default='resnet18')
+    parser.add_argument("--sound", help="use sound", action='store_true')
+    parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("--percentile", default=0.990, type=float)
     parser.add_argument("--threshold", default=0.500, type=float)
     parser.add_argument("--bin-size", default=5, type=int)
