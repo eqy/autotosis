@@ -1,4 +1,4 @@
-# adapted from pytorch imagenet example
+
 
 import argparse
 import os
@@ -129,10 +129,16 @@ def main():
 def get_inference_model(model_path, arch='resnet18'):
     print("=> creating model '{}'".format(arch))
     model = models.__dict__[arch](num_classes=2)
+    model = torch.nn.DataParallel(model)
     if torch.cuda.device_count():
-        model = torch.nn.DataParallel(model).cuda()
+        model = model.cuda()
     print("=> loading checkpoint '{}'".format(model_path))
-    checkpoint = torch.load(model_path)
+    if torch.cuda.device_count():
+        checkpoint = torch.load(model_path)
+    else:
+        print("CPU")
+        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+
     model.load_state_dict(checkpoint['state_dict'])
     print("=> loaded checkpoint '{}' (epoch {})"
           .format(model_path, checkpoint['epoch']))
@@ -444,7 +450,7 @@ def validate(val_loader, model, criterion, args):
 def save_checkpoint(state, is_best, args, filename='checkpoint.pth.tar'):
     torch.save(state, args.prefix + filename)
     if is_best:
-        shutil.copyfile(filename, args.prefix + 'model_best.pth.tar')
+        shutil.copyfile(args.prefix + filename, args.prefix + 'model_best.pth.tar')
 
 
 class AverageMeter(object):
