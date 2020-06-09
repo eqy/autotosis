@@ -2,6 +2,7 @@ import argparse
 import ast
 import csv
 import os
+import random
 import subprocess
 import shutil
 import numpy as np
@@ -197,7 +198,7 @@ class Clip(object):
     #    return jpg_inference_results
 
     def inference(self, model_path, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True):
-        tempdir = 'temp/'
+        tempdir = f'temp{str(random.randint(0,2**32))}/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
