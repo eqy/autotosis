@@ -1,4 +1,5 @@
 import argparse
+import ast
 import os
 import sys
 from clip import Clip
@@ -19,7 +20,10 @@ def _join_videos(listpath, outputpath):
 
 
 def single_inference(args):
-    clip = Clip(args.single_inference)
+    if args.face_bbox is not None:
+        clip = Clip(args.single_inference, ast.literal_eval(args.face_bbox))
+    else:
+        clip = Clip(args.single_inference)
     clip.inference_frameskip = 6
     clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
     if args.benchmark:
@@ -52,7 +56,10 @@ def highlights(args):
             for path in paths:
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
-        clip = Clip(tempconcatvideo)
+        if args.face_bbox is not None:
+            clip = Clip(tempconcatvideo, ast.literal_eval(args.face_bbox))
+        else:
+            clip = Clip(tempconcatvideo)
         clip.inference_frameskip = 4 
         clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
         if args.benchmark:
@@ -64,7 +71,10 @@ def highlights(args):
         os.unlink(tempvideolist)
     else:
         path = args.prefix
-        clip = Clip(path)
+        if args.face_bbox is not None:
+            clip = Clip(path, ast.literal_eval(args.face_bbox))
+        else:
+            clip = Clip(path)
         clip.inference_frameskip = 4
         clip.inference(args.model_path, arch=args.arch, batch_size=args.batch_size, use_sound=args.sound, concat_full=args.concat_full)
         if args.benchmark:
@@ -89,6 +99,7 @@ def main():
     parser.add_argument("--threshold", default=0.500, type=float)
     parser.add_argument("--bin-size", default=5, type=int)
     parser.add_argument("--batch-size", default=32, type=int)
+    parser.add_argument("--face-bbox", type=str)
     args = parser.parse_args()
 
 
