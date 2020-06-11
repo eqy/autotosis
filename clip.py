@@ -81,7 +81,7 @@ class InferenceFrames(Dataset):
 
 # TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
-    def __init__(self, filename, audio_cutoff, positive_segments=None,
+    def __init__(self, filename, positive_segments=None,
                  face_bbox=DEFAULT_FACE_BBOX,
                  inference_frameskip=INFERENCE_FRAMESKIP):
         self.filename = filename
@@ -108,7 +108,6 @@ class Clip(object):
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
         self.duration = float(video_meta['duration'])
-        self.audio_cutoff = audio_cutoff
         if 'nb_frames' in video_meta:
             self.nb_frames = int(video_meta['nb_frames'])
         else:
@@ -125,7 +124,7 @@ class Clip(object):
         )
         return out
 
-    def generate_data2(self, dest_path, crop=True, output_resolution=256, concat_full=True, use_sound=True):
+    def generate_data2(self, dest_path, audio_cutoff, crop=True, output_resolution=256, concat_full=True, use_sound=True):
         # unload all of the frames even if it's extra work because crap is fast
         # TODO support frameskip? (or not because maybe more data is just better)
         pos_path = os.path.join(dest_path, '1')
@@ -148,7 +147,7 @@ class Clip(object):
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd)
         temp_spectro_path = os.path.join(sound_path, f'{basename}_sound.mp4')
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={self.audio_cutoff},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', temp_spectro_path]
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', temp_spectro_path]
         subprocess.call(ffmpeg_spectro_cmd)
         ffmpeg_sound_cmd = ['ffmpeg', '-i', temp_spectro_path, '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
         subprocess.call(ffmpeg_sound_cmd)
@@ -198,7 +197,7 @@ class Clip(object):
     #    assert len(jpg_inference_results) == len(jpg_filenames)
     #    return jpg_inference_results
 
-    def inference(self, model_path, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True):
+    def inference(self, model_path, audio_cutoff, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True):
         tempdir = f'temp{str(random.randint(0,2**32))}/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -216,7 +215,7 @@ class Clip(object):
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd)
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', '[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={self.audio_cutoff},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
         subprocess.call(ffmpeg_spectro_cmd)
         ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
         subprocess.call(ffmpeg_sound_cmd)
