@@ -381,6 +381,67 @@ class Clip(object):
         .run()
         )
 
+    
+    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', delete_temp=False, granularity=1):
+        tempdir = 'tempclips/'
+        if not os.path.exists(tempdir):
+            os.makedirs(tempdir)
+         
+        assert self.inference_results is not None
+        segments = list()
+        assert bin_size % granularity == 0
+        for i in range(0, len(self.inference_results), granularity):
+            segment = list()
+            for j in range(i, i+granularity):
+                if j >= len(self.inference_results):
+                    break
+                segment += self.inference_results[j]
+            mean = np.mean(segment)
+            # assert mean is not np.nan
+            if mean is not np.nan:
+                segments.append((i, mean))
+        
+        n_segments = len(segments)
+        total_time = n_segments * granularity
+        start_time = 0
+        
+        basename = os.path.splitext(os.path.basename(self.filename))[0] + '_h'
+        temp_clips = list()
+        i = 0
+        while start_time + bin_size < total_time:
+            end_time = start_time + bin_size
+            start_idx = int(start_time//granularity)
+            end_idx = int(end_time//granularity)
+            cur_preds = [segment[1] for segment in segments[start_idx:end_idx]]
+            cur_mean = np.mean(cur_preds)
+            if cur_mean < threshold:
+                start_time += granularity
+            else:
+                additional = granularity
+                end_time = end_time + additional
+                end_idx = int(end_time//granularity)
+                while cur_mean >= threshold:
+                    cur_preds.append(segments[end_idx-1][1])
+                    cur_mean = np.mean(cur_preds)
+                    additional += granularity
+                    if (end_time + additional)//granularity >= n_segments:
+                        break
+                    end_idx = int(end_time//granularity)
+                print(cur_preds)
+                print(start_time, end_time)
+                dest = os.path.join(tempdir, f'{basename}{i}.mp4')
+                self._trim(dest, start=start_time, end=end_time)
+                temp_clips.append(dest)
+
+                i += 1
+                start_time = end_time
+
+        self._concat_highlights(temp_clips, output_path)
+
+        if delete_temp:
+            for temp_clip_path in temp_clips:
+                os.unlink(temp_clip_path)
+        
 
     # TODO: avoid having to pass bin size to this function?
     def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', delete_temp=False):
