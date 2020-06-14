@@ -234,7 +234,7 @@ class Clip(object):
             sound_filenames = list()
 
         for dirpath, dirnames, filenames in os.walk(tempdir):
-            print(len(filenames))
+            print(len(filenames), "files")
             #batch_count = 0
             for filename in filenames:
                 if newbasename not in filename:
@@ -265,7 +265,7 @@ class Clip(object):
 
         dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox, concat_full=concat_full, sound_filenames=sound_filenames)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
-        print(len(dataset))
+        print(len(dataset) "data size")
         bar = Bar('inference progress', max=len(jpg_filenames))
         for samples, idxs in dataloader:
             output = inference_model(samples)
@@ -418,14 +418,16 @@ class Clip(object):
                 start_time += granularity
             else:
                 additional = granularity
-                end_time = end_time + additional
+                orig_end_time = end_time
+                end_time = orig_end_time + additional
                 end_idx = int(end_time//granularity)
-                while cur_mean >= threshold:
+                while cur_mean >= threshold and end_idx < n_segments:
                     cur_preds.append(segments[end_idx-1][1])
                     cur_mean = np.mean(cur_preds)
                     additional += granularity
-                    if (end_time + additional)//granularity >= n_segments:
+                    if int((orig_end_time + additional)//granularity) >= n_segments:
                         break
+                    end_time = orig_end_time + additional
                     end_idx = int(end_time//granularity)
                 print(cur_preds)
                 print(start_time, end_time)
