@@ -35,11 +35,11 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet18)')
-parser.add_argument('-r', '--resolution', default=128, type=int, metavar='R',
+parser.add_argument('-r', '--resolution', default=256, type=int, metavar='R',
                     help='image resolution to use (default: 128)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=90, type=int, metavar='N',
+parser.add_argument('--epochs', default=30, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -55,7 +55,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
-parser.add_argument('--ld', '--learning-rate-decay', default=30, type=float,
+parser.add_argument('--ld', '--learning-rate-decay', default=10, type=float,
                     help='decay learning rate every number of epochs')
 parser.add_argument('-p', '--print-freq', default=100, type=int,
                     metavar='N', help='print frequency (default: 10)')
@@ -281,7 +281,7 @@ def main_worker(gpu, ngpus_per_node, args):
         traindir,
         transforms.Compose([
             #transforms.RandomResizedCrop(args.resolution, scale=(0.8, 1.0)),
-            PartialRandomResizedCrop(args.resolution, scale=(0.8, 1.0), segments=segments),
+            PartialRandomResizedCrop(args.resolution, scale=(0.5, 1.0), segments=segments),
             #transforms.RandomHorizontalFlip(),
             #transforms.Resize(args.resolution),
             transforms.ToTensor(),
