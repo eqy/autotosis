@@ -17,7 +17,8 @@ import ffmpeg
 from artosisnet import get_inference_model, get_prediction
 
 INFERENCE_FRAMESKIP = 30
-DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
+#DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
+DEFAULT_FACE_BBOX = [0.7833, 0.1296, 0.9682, 0.3694]
 
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -265,7 +266,7 @@ class Clip(object):
 
         dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox, concat_full=concat_full, sound_filenames=sound_filenames)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
-        print(len(dataset) "data size")
+        print(len(dataset), "data size")
         bar = Bar('inference progress', max=len(jpg_filenames))
         for samples, idxs in dataloader:
             output = inference_model(samples)
@@ -571,7 +572,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(0, len(clips)):
+    for i in range(340, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
