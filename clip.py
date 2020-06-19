@@ -176,7 +176,7 @@ class Clip(object):
                     im = Image.open(dst)
                     height = im.height
                     width = im.width
-                    blackout_dims = [1920//2 - self.box_width//2, 900, self.box_width, self.box_height]
+                    blackout_dims = [self.width//2 - self.box_width//2, self.height-180, self.box_width, self.box_height]
                     sound_dst = None
                     if use_sound:
                         offset = 1
@@ -304,8 +304,8 @@ class Clip(object):
             red = int(255*pred)
             green = int(255*(1.0-pred))
             fontcolor=f'{red:02x}{green:02x}00'
-            x = 1920//2 - self.box_width//2
-            stream = stream.drawtext(text=f"salt: {pred:.3f}", x=x, y=920, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            x = self.width//2 - self.box_width//2
+            stream = stream.drawtext(text=f"salt: {pred:.3f}", x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -314,8 +314,8 @@ class Clip(object):
 
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
-        x = 1920//2 - self.box_width//2
-        stream = stream.drawbox(x=x, y=900, height=self.box_height, width=self.box_width, color='black', t='fill')
+        x = self.width//2 - self.box_width//2
+        stream = stream.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
@@ -351,8 +351,8 @@ class Clip(object):
             .trim(start=start, end=end)
             .setpts('PTS-STARTPTS')
         )
-        x = 1920//2 - self.box_width//2
-        vid = vid.drawbox(x=x, y=900, height=self.box_height, width=self.box_width, color='black', t='fill')
+        x = self.width//2 - self.box_width//2
+        vid = vid.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
 
         for i in range(start, end):
             second_preds = self.inference_results[i]
@@ -555,6 +555,7 @@ def main():
     #        csvwriter.writerow(clip.to_row())
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", help="output data directory", default='data')
+    parser.add_argument("-l", help="input label file", default='data.csv')
     parser.add_argument("--sound", help="sound", action='store_true')
     parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("--audio-cutoff", help="audio cutoff frequency (Hz)", default=8000, type=int)
@@ -563,7 +564,7 @@ def main():
 
     filenames = set()
     clips = list()
-    with open('data.csv', 'r') as csvfile:
+    with open(args.l, 'r') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=' ')
         for row in csvreader:
             clip = load_clip_from_csv_row(row)
@@ -572,7 +573,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(340, len(clips)):
+    for i in range(0, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
