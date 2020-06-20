@@ -252,7 +252,7 @@ class Clip(object):
                         while not os.path.exists(sound_filename):
                             offset -= 1
                             sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
-                            assert offset > -10, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                            assert offset > -100, f'could not find {basename}_sound_{frame_num + 1}.jpg'
                         sound_filenames.append(sound_filename)
                         assert os.path.exists(sound_filenames[-1])
                     time = (frame_num)/inference_fps
@@ -557,7 +557,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", help="output data directory", default='data')
     parser.add_argument("-l", help="input label file", default='data.csv')
-    parser.add_argument("--sound", help="sound", action='store_true')
+    parser.add_argument("--no-sound", help="no sound", action='store_true')
     parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("--audio-cutoff", help="audio cutoff frequency (Hz)", default=8000, type=int)
     parser.add_argument("-r", "--resolution", help="resolution", default=256, type=int)
@@ -580,13 +580,13 @@ def main():
             if i == 4 or i == 38:
                 clips[i].generate_data2(os.path.join(args.d, 'val'),
                                         audio_cutoff=args.audio_cutoff,
-                                        use_sound=args.sound,
+                                        use_sound=not args.no_sound,
                                         output_resolution=args.resolution,
                                         concat_full=args.concat_full)
             else:
                 clips[i].generate_data2(os.path.join(args.d, 'train'),
                                         audio_cutoff=args.audio_cutoff,
-                                        use_sound=args.sound,
+                                        use_sound=not args.no_sound,
                                         output_resolution=args.resolution,
                                         concat_full=args.concat_full)
         # want determinism in generating datasets to support partial re-generation
@@ -594,13 +594,13 @@ def main():
         elif i % 4 == 0:
             clips[i].generate_data2(os.path.join(args.d, 'val'),
                                     audio_cutoff=args.audio_cutoff,
-                                    use_sound=args.sound,
+                                    use_sound=not args.no_sound,
                                     output_resolution=args.resolution,
                                     concat_full=args.concat_full)
         else:
             clips[i].generate_data2(os.path.join(args.d, 'train'),
                                     audio_cutoff=args.audio_cutoff,
-                                    use_sound=args.sound,
+                                    use_sound=not args.no_sound,
                                     output_resolution=args.resolution,
                                     concat_full=args.concat_full)
 
