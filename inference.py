@@ -21,7 +21,7 @@ def _join_videos(listpath, outputpath):
 
 def single_inference(args):
     if args.face_bbox is not None:
-        clip = Clip(args.single_inference, ast.literal_eval(args.face_bbox))
+        clip = Clip(args.single_inference, face_bbox=ast.literal_eval(args.face_bbox))
     else:
         clip = Clip(args.single_inference)
     clip.inference_frameskip = args.frameskip
@@ -57,7 +57,7 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         if args.face_bbox is not None:
-            clip = Clip(tempconcatvideo, ast.literal_eval(args.face_bbox))
+            clip = Clip(tempconcatvideo, face_bbox=ast.literal_eval(args.face_bbox))
         else:
             clip = Clip(tempconcatvideo)
         clip.inference_frameskip = args.frameskip
@@ -73,7 +73,7 @@ def highlights(args):
     else:
         path = args.prefix
         if args.face_bbox is not None:
-            clip = Clip(path, ast.literal_eval(args.face_bbox))
+            clip = Clip(path, face_bbox=ast.literal_eval(args.face_bbox))
         else:
             clip = Clip(path)
         clip.inference_frameskip = args.frameskip
