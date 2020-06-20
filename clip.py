@@ -216,7 +216,7 @@ class Clip(object):
         ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
         print(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd)
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff},format=yuv420p[v]:{fps_str}', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff}:{fps_str},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
         subprocess.call(ffmpeg_spectro_cmd)
         ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
         subprocess.call(ffmpeg_sound_cmd)
