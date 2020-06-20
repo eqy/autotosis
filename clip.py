@@ -184,7 +184,7 @@ class Clip(object):
                         while not os.path.exists(sound_dst):
                             offset -= 1
                             sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + offset}.jpg')
-                            assert offset > -10, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                            assert offset > -100, f'could not find {basename}_sound_{frame_num + 1}.jpg'
                     im2 = frame_to_img(dst, output_resolution, crop, self.face_bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
                     im2.save(dst, quality=95)
                 bar.next()
@@ -538,6 +538,7 @@ def load_clip_from_csv_row(row):
             filename = item
         elif i == 1:
             face_bbox = ast.literal_eval(item)
+            assert len(face_bbox) == 4
         else:
             segment = ast.literal_eval(item)
             assert segment[0] <= segment[1]
