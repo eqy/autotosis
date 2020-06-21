@@ -14,7 +14,7 @@ Frame extraction:
 - Throttling 1060: 768x256 : 1.060s per batch at batch size 32
 
 ## dataset size
-- 2020/6/08 396 videos, train: 267899 individual images (159814 neg, 108085 pos), val: 70934 (44935 neg, 25999 pos)
+- 2020/6/08 340 videos, train: 267899 individual images (159814 neg, 108085 pos), val: 70934 (44935 neg, 25999 pos)
 - 2020/5/08 168 videos, train: 137257 individual images (92982 neg, 44275 pos), val: 30692 (22625 neg, 8067 pos)
 - 2020/4/30 144 videos, train: 121657 individual images (77705 neg, 43952 pos), val: 26227 (18160 neg, 8067 pos)
 - 2020/4/28 101 videos, train: 85482 individual images (56327 neg, 29155 pos), val: 14143 (11220 neg, 2923 pos)
