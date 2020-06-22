@@ -84,7 +84,8 @@ class InferenceFrames(Dataset):
 class Clip(object):
     def __init__(self, filename, positive_segments=None,
                  face_bbox=DEFAULT_FACE_BBOX,
-                 inference_frameskip=INFERENCE_FRAMESKIP):
+                 inference_frameskip=INFERENCE_FRAMESKIP,
+                 text='salt'):
         self.filename = filename
         if not os.path.exists(self.filename):
             raise ValueError('clip source not found')
@@ -93,6 +94,7 @@ class Clip(object):
         else:
             self.positive_segments = list()
         self.face_bbox = face_bbox 
+        self.text = text
         probe = ffmpeg.probe(filename)
         #print(probe)
 
@@ -104,6 +106,8 @@ class Clip(object):
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
         self.box_width = 260
+        if len(self.text) > 4:
+            self.box_width += 10
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
@@ -291,6 +295,12 @@ class Clip(object):
                     inference_results[i].append(mean)
         self.inference_results = inference_results
         shutil.rmtree(tempdir)
+        del dataset
+        del dataloader
+        del output
+        del preds
+        del inference_model
+        torch.cuda.empty_cache()
 
     def _drawtext(self, stream, second, second_preds):
         chunks = len(second_preds)
@@ -305,7 +315,10 @@ class Clip(object):
             green = int(255*(1.0-pred))
             fontcolor=f'{red:02x}{green:02x}00'
             x = self.width//2 - self.box_width//2
-            stream = stream.drawtext(text=f"salt: {pred:.3f}", x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            disp_pred = pred
+            if self.text != 'salt':
+                disp_pred = 1.0 - pred
+            stream = stream.drawtext(text=f"{self.text}: {disp_pred:.3f}", x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -561,6 +574,7 @@ def main():
     parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("--audio-cutoff", help="audio cutoff frequency (Hz)", default=8000, type=int)
     parser.add_argument("-r", "--resolution", help="resolution", default=256, type=int)
+    parser.add_argument("--start", type=int, default=0)
     args = parser.parse_args()
 
     filenames = set()
@@ -574,7 +588,7 @@ def main():
             clip.print_summary()
             clips.append(clip)
     
-    for i in range(0, len(clips)):
+    for i in range(args.start, len(clips)):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
