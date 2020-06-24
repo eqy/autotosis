@@ -305,8 +305,8 @@ class Clip(object):
     def _drawtext(self, stream, second, second_preds, predskip=1):
         chunks = len(second_preds)//predskip
         chunksiz = 1.0/chunks
-        for j in range(0, chunks, predskip):
-            pred = second_preds[j]
+        for j in range(0, chunks):
+            pred = second_preds[j*predskip]
             if np.isnan(pred):
                 continue
             start = second + j*chunksiz
@@ -358,6 +358,14 @@ class Clip(object):
             print("warning, argument list too long, skipping some prediction printing...")
             predskip += 1
             self._safetrim(dest, start, end, predskip)
+        except ffmpeg._run.Error as e:
+            # TODO: propagate exception if not a skipped output
+            print("skipping, ok?")
+            #if ('Not overwriting' in e.stderr):
+            #    print("Skipping, ok...")
+            #    pass
+            #else:
+            #    raise e
 
     # some voodoo from the ffmpeg python github
     # start and end are TIMES (in seconds), not FRAMES
