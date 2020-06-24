@@ -302,10 +302,10 @@ class Clip(object):
         del inference_model
         torch.cuda.empty_cache()
 
-    def _drawtext(self, stream, second, second_preds):
-        chunks = len(second_preds)
+    def _drawtext(self, stream, second, second_preds, predskip=1):
+        chunks = len(second_preds)//predskip
         chunksiz = 1.0/chunks
-        for j in range(chunks):
+        for j in range(0, chunks, predskip):
             pred = second_preds[j]
             if np.isnan(pred):
                 continue
@@ -351,9 +351,17 @@ class Clip(object):
             bins.append((i, mean))
         self.bins = bins
 
+    def _safetrim(self, dest, start, end, predskip=1):
+        try:
+            self._trim(dest, start, end, predskip)
+        except OSError:
+            print("warning, argument list too long, skipping some prediction printing...")
+            predskip += 1
+            self._safetrim(dest, start, end, predskip)
+
     # some voodoo from the ffmpeg python github
     # start and end are TIMES (in seconds), not FRAMES
-    def _trim(self, dest, start, end):
+    def _trim(self, dest, start, end, predskip=1):
         input_stream = ffmpeg.input(self.filename)
         print(start, end)
         # TODO: this part is exceptionally slow... seems like ffmpeg is
@@ -369,7 +377,7 @@ class Clip(object):
 
         for i in range(start, end):
             second_preds = self.inference_results[i]
-            vid = self._drawtext(vid, i-start, second_preds)
+            vid = self._drawtext(vid, i-start, second_preds, predskip)
              
         aud = (
             input_stream.audio
@@ -446,7 +454,7 @@ class Clip(object):
                 print(cur_preds)
                 print(start_time, end_time)
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
-                self._trim(dest, start=start_time, end=end_time)
+                self._safetrim(dest, start=start_time, end=end_time)
                 temp_clips.append(dest)
 
                 i += 1
@@ -496,7 +504,7 @@ class Clip(object):
                 end_frame = rounded_framerate*end_time
                 print(start_frame, end_frame)
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
-                self._trim(dest, start=start_time, end=end_time)
+                self._safetrim(dest, start=start_time, end=end_time)
                 temp_clips.append(dest)
                 for t in range(start_time, end_time, bin_size):
                     processed.add(t)
