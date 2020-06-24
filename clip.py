@@ -387,7 +387,7 @@ class Clip(object):
     
         joined = ffmpeg.concat(vid, aud, v=1, a=1).node
         output = ffmpeg.output(joined[0], joined[1], dest)
-        output = ffmpeg.overwrite_output(output)
+        # output = ffmpeg.overwrite_output(output)
         output.run() 
 
     def _concat_highlights(self, paths, output_path):
