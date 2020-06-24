@@ -20,10 +20,13 @@ def _join_videos(listpath, outputpath):
 
 
 def single_inference(args):
+    text = 'salt'
+    if args.chill:
+        text = 'chill'
     if args.face_bbox is not None:
-        clip = Clip(args.single_inference, face_bbox=ast.literal_eval(args.face_bbox))
+        clip = Clip(args.single_inference, face_bbox=ast.literal_eval(args.face_bbox), text=text)
     else:
-        clip = Clip(args.single_inference)
+        clip = Clip(args.single_inference, text=text)
     clip.inference_frameskip = args.frameskip
     clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
     if args.benchmark:
@@ -47,6 +50,10 @@ def highlights(args):
     if not len(paths):
         assert os.path.exists(args.prefix)
 
+    text = 'salt'
+    if args.chill:
+        text = 'chill'
+
     if len(paths) >= 1:
         print("joining videos...")
         tempvideolist = 'tempvideolist' + str(random.randint(0,2**32))
@@ -57,9 +64,9 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         if args.face_bbox is not None:
-            clip = Clip(tempconcatvideo, face_bbox=ast.literal_eval(args.face_bbox))
+            clip = Clip(tempconcatvideo, face_bbox=ast.literal_eval(args.face_bbox), text=text)
         else:
-            clip = Clip(tempconcatvideo)
+            clip = Clip(tempconcatvideo, text=text)
         clip.inference_frameskip = args.frameskip
         clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
         if args.benchmark:
@@ -73,9 +80,9 @@ def highlights(args):
     else:
         path = args.prefix
         if args.face_bbox is not None:
-            clip = Clip(path, face_bbox=ast.literal_eval(args.face_bbox))
+            clip = Clip(path, face_bbox=ast.literal_eval(args.face_bbox), text=text)
         else:
-            clip = Clip(path)
+            clip = Clip(path, text=text)
         clip.inference_frameskip = args.frameskip
         clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
         if args.benchmark:
@@ -106,6 +113,7 @@ def main():
     parser.add_argument("--batch-size", default=32, type=int)
     parser.add_argument("--face-bbox", type=str)
     parser.add_argument("--frameskip", default=4, type=int)
+    parser.add_argument("--chill", action='store_true')
     args = parser.parse_args()
 
 
