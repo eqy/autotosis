@@ -112,7 +112,7 @@ def main():
     parser.add_argument("--bin-size", default=5, type=int)
     parser.add_argument("--batch-size", default=32, type=int)
     parser.add_argument("--face-bbox", type=str)
-    parser.add_argument("--frameskip", default=4, type=int)
+    parser.add_argument("--frameskip", default=10, type=int)
     parser.add_argument("--chill", action='store_true')
     args = parser.parse_args()
 
