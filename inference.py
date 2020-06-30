@@ -108,14 +108,27 @@ def main():
     parser.add_argument("--concat-full", help="concat full frame", action='store_true')
     parser.add_argument("--audio-cutoff", help="audio frequency cutoff", default=8000, type=int)
     parser.add_argument("--percentile", default=0.990, type=float)
-    parser.add_argument("--threshold", default=0.500, type=float)
+    parser.add_argument("--threshold", default=0.7, type=float)
     parser.add_argument("--bin-size", default=5, type=int)
     parser.add_argument("--batch-size", default=32, type=int)
     parser.add_argument("--face-bbox", type=str)
     parser.add_argument("--frameskip", default=10, type=int)
     parser.add_argument("--chill", action='store_true')
+    parser.add_argument("--gypsy", action='store_true')
+    parser.add_argument("--artosis", action='store_true')
     args = parser.parse_args()
 
+    # shorcut some defaults for strimmers
+    if args.gypsy:
+        assert not args.artosis
+        args.face_bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
+        args.bin_size = 8
+        args.thresold = 0.7
+    if args.artosis:
+        assert not args.gypsy
+        args.face_bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
+        args.bin_size = 16
+        args.threshold = 0.7
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
