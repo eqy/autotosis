@@ -23,8 +23,12 @@ def single_inference(args):
     text = 'salt'
     if args.chill:
         text = 'chill'
-    if args.face_bbox is not None:
-        clip = Clip(args.single_inference, face_bbox=ast.literal_eval(args.face_bbox), text=text)
+        assert not args.pog
+    if args.pog:
+        text = 'pog'
+        assert not args.chill
+    if args.bbox is not None:
+        clip = Clip(args.single_inference, bbox=ast.literal_eval(args.bbox), text=text)
     else:
         clip = Clip(args.single_inference, text=text)
     clip.inference_frameskip = args.frameskip
@@ -63,8 +67,8 @@ def highlights(args):
             for path in paths:
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
-        if args.face_bbox is not None:
-            clip = Clip(tempconcatvideo, face_bbox=ast.literal_eval(args.face_bbox), text=text)
+        if args.bbox is not None:
+            clip = Clip(tempconcatvideo, bbox=ast.literal_eval(args.bbox), text=text)
         else:
             clip = Clip(tempconcatvideo, text=text)
         clip.inference_frameskip = args.frameskip
@@ -74,13 +78,13 @@ def highlights(args):
         clip.bin(args.bin_size)
         print(clip.bins)
         #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adacjent)
-        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp)
+        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp, notext=args.notext)
         os.unlink(tempconcatvideo)
         os.unlink(tempvideolist)
     else:
         path = args.prefix
-        if args.face_bbox is not None:
-            clip = Clip(path, face_bbox=ast.literal_eval(args.face_bbox), text=text)
+        if args.bbox is not None:
+            clip = Clip(path, bbox=ast.literal_eval(args.bbox), text=text)
         else:
             clip = Clip(path, text=text)
         clip.inference_frameskip = args.frameskip
@@ -90,7 +94,7 @@ def highlights(args):
         clip.bin(args.bin_size)
         print(clip.bins)
         #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adjacent)
-        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp)
+        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp, notext=args.notext)
 
 
 
@@ -111,23 +115,33 @@ def main():
     parser.add_argument("--threshold", default=0.7, type=float)
     parser.add_argument("--bin-size", default=5, type=int)
     parser.add_argument("--batch-size", default=32, type=int)
-    parser.add_argument("--face-bbox", type=str)
+    parser.add_argument("--bbox", type=str)
     parser.add_argument("--frameskip", default=10, type=int)
     parser.add_argument("--chill", action='store_true')
+    parser.add_argument("--pog", action='store_true')
     parser.add_argument("--gypsy", action='store_true')
     parser.add_argument("--artosis", action='store_true')
+    parser.add_argument("--notext", action='store_true')
     args = parser.parse_args()
 
     # shorcut some defaults for strimmers
     if args.gypsy:
         assert not args.artosis
-        args.face_bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
+        assert not args.pog
+        args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
         args.bin_size = 8
-        args.thresold = 0.7
+        args.threshold = 0.7
     if args.artosis:
         assert not args.gypsy
-        args.face_bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
+        assert not args.pog
+        args.bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
         args.bin_size = 16
+        args.threshold = 0.75
+    if args.pog:
+        assert not args.gypsy
+        assert not args.artosis
+        args.bbox = "[0.0, 0.0, 1.0, 1.0]"
+        args.bin_size = 5
         args.threshold = 0.7
 
     assert args.single_inference is not None or args.prefix is not None
