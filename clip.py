@@ -58,11 +58,11 @@ def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blacko
 
 
 class InferenceFrames(Dataset):
-    def __init__(self, jpg_filenames, crop, output_resolution, face_bbox, concat_full, sound_filenames):
+    def __init__(self, jpg_filenames, crop, output_resolution, bbox, concat_full, sound_filenames):
         self.jpg_filenames = jpg_filenames
         self.crop = crop
         self.output_resolution = output_resolution
-        self.face_bbox = face_bbox
+        self.bbox = bbox
         self.use_sound = sound_filenames is not None
         self.sound_filenames = sound_filenames
 
@@ -74,7 +74,7 @@ class InferenceFrames(Dataset):
         sound_filename = None
         if self.sound_filenames is not None:
             sound_filename = self.sound_filenames[idx]
-        im2 = frame_to_img(filename, self.output_resolution, self.crop, self.face_bbox, sound_filename=sound_filename)
+        im2 = frame_to_img(filename, self.output_resolution, self.crop, self.bbox, sound_filename=sound_filename)
         t = transforms.ToTensor()(im2)
         t = normalize(t)
         return t, idx
@@ -83,7 +83,7 @@ class InferenceFrames(Dataset):
 # TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
     def __init__(self, filename, positive_segments=None,
-                 face_bbox=DEFAULT_FACE_BBOX,
+                 bbox=DEFAULT_FACE_BBOX,
                  inference_frameskip=INFERENCE_FRAMESKIP,
                  text='salt'):
         self.filename = filename
@@ -93,7 +93,7 @@ class Clip(object):
             self.positive_segments = positive_segments
         else:
             self.positive_segments = list()
-        self.face_bbox = face_bbox 
+        self.bbox = bbox 
         self.text = text
         probe = ffmpeg.probe(filename)
         #print(probe)
@@ -105,9 +105,8 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 260
-        if len(self.text) > 4:
-            self.box_width += 10
+        self.box_width = 270
+        self.box_width += min(0, len(self.text) - 4)*8
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
@@ -189,7 +188,7 @@ class Clip(object):
                             offset -= 1
                             sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + offset}.jpg')
                             assert offset > -100, f'could not find {basename}_sound_{frame_num + 1}.jpg'
-                    im2 = frame_to_img(dst, output_resolution, crop, self.face_bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
+                    im2 = frame_to_img(dst, output_resolution, crop, self.bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
                     im2.save(dst, quality=95)
                 bar.next()
         bar.finish()
@@ -268,7 +267,7 @@ class Clip(object):
         assert len(true_frame_nums) == len(time_idxs)
 
 
-        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.face_bbox, concat_full=concat_full, sound_filenames=sound_filenames)
+        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.bbox, concat_full=concat_full, sound_filenames=sound_filenames)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
         print(len(dataset), "data size")
         bar = Bar('inference progress', max=len(jpg_filenames))
@@ -316,7 +315,7 @@ class Clip(object):
             fontcolor=f'{red:02x}{green:02x}00'
             x = self.width//2 - self.box_width//2
             disp_pred = pred
-            if self.text != 'salt':
+            if self.text != 'salt' and self.text != 'pog':
                 disp_pred = 1.0 - pred
             stream = stream.drawtext(text=f"{self.text}: {disp_pred:.3f}", x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
@@ -351,13 +350,13 @@ class Clip(object):
             bins.append((i, mean))
         self.bins = bins
 
-    def _safetrim(self, dest, start, end, predskip=1):
+    def _safetrim(self, dest, start, end, predskip=1, notext=False):
         try:
-            self._trim(dest, start, end, predskip)
+            self._trim(dest, start, end, predskip, notext)
         except OSError:
             print("warning, argument list too long, skipping some prediction printing...")
             predskip += 1
-            self._safetrim(dest, start, end, predskip)
+            self._safetrim(dest, start, end, predskip, notext)
         except ffmpeg._run.Error as e:
             # TODO: propagate exception if not a skipped output
             print("skipping, ok?")
@@ -369,7 +368,7 @@ class Clip(object):
 
     # some voodoo from the ffmpeg python github
     # start and end are TIMES (in seconds), not FRAMES
-    def _trim(self, dest, start, end, predskip=1):
+    def _trim(self, dest, start, end, predskip=1, notext=False):
         input_stream = ffmpeg.input(self.filename)
         print(start, end)
         # TODO: this part is exceptionally slow... seems like ffmpeg is
@@ -380,12 +379,13 @@ class Clip(object):
             .trim(start=start, end=end)
             .setpts('PTS-STARTPTS')
         )
-        x = self.width//2 - self.box_width//2
-        vid = vid.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
+        if not notext:
+            x = self.width//2 - self.box_width//2
+            vid = vid.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
 
-        for i in range(start, end):
-            second_preds = self.inference_results[i]
-            vid = self._drawtext(vid, i-start, second_preds, predskip)
+            for i in range(start, end):
+                second_preds = self.inference_results[i]
+                vid = self._drawtext(vid, i-start, second_preds, predskip)
              
         aud = (
             input_stream.audio
@@ -412,7 +412,7 @@ class Clip(object):
         )
 
     
-    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', delete_temp=False, granularity=1):
+    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', delete_temp=False, granularity=1, notext=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -462,7 +462,7 @@ class Clip(object):
                 print(cur_preds)
                 print(start_time, end_time)
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
-                self._safetrim(dest, start=start_time, end=end_time)
+                self._safetrim(dest, start=start_time, end=end_time, notext=notext)
                 temp_clips.append(dest)
 
                 i += 1
@@ -476,7 +476,7 @@ class Clip(object):
         
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', delete_temp=False):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', delete_temp=False, notext=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -512,7 +512,7 @@ class Clip(object):
                 end_frame = rounded_framerate*end_time
                 print(start_frame, end_frame)
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
-                self._safetrim(dest, start=start_time, end=end_time)
+                self._safetrim(dest, start=start_time, end=end_time, notext=notext)
                 temp_clips.append(dest)
                 for t in range(start_time, end_time, bin_size):
                     processed.add(t)
@@ -547,7 +547,7 @@ class Clip(object):
     def to_row(self):
         row = list()
         row.append(self.filename)
-        row.append(self.face_bbox)
+        row.append(self.bbox)
         for segment in self.positive_segments:
             row.append(segment)
         return row
@@ -566,8 +566,8 @@ def load_clip_from_csv_row(row):
         if i == 0:
             filename = item
         elif i == 1:
-            face_bbox = ast.literal_eval(item)
-            assert len(face_bbox) == 4
+            bbox = ast.literal_eval(item)
+            assert len(bbox) == 4
         else:
             segment = ast.literal_eval(item)
             assert segment[0] <= segment[1]
@@ -575,7 +575,7 @@ def load_clip_from_csv_row(row):
                 assert positive_segments[-1][1] <= segment[0]
             positive_segments.append(segment)
 
-    return Clip(filename, positive_segments, face_bbox)
+    return Clip(filename, positive_segments, bbox)
 
 
 def main():
@@ -591,6 +591,7 @@ def main():
     parser.add_argument("--audio-cutoff", help="audio cutoff frequency (Hz)", default=8000, type=int)
     parser.add_argument("-r", "--resolution", help="resolution", default=256, type=int)
     parser.add_argument("--start", type=int, default=0)
+    parser.add_argument("--end", type=int, default=-1)
     args = parser.parse_args()
 
     filenames = set()
@@ -603,8 +604,9 @@ def main():
             filenames.add(clip.filename)
             clip.print_summary()
             clips.append(clip)
-    
-    for i in range(args.start, len(clips)):
+   
+    end = len(clips) if args.end < 0  else min(args.end, len(clips))
+    for i in range(args.start, end):
         clips[i].print_summary()
         if i < 40:
             if i == 4 or i == 38:
