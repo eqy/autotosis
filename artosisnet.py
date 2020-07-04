@@ -86,6 +86,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'N processes per node, which has N GPUs. This is the '
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
+parser.add_argument('--fp16', action='store_true')
 
 
 best_precision = 0
@@ -198,6 +199,12 @@ def main_worker(gpu, ngpus_per_node, args):
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch](num_classes=2)
 
+    if args.fp16:
+        print("fp16 mode")
+        model.half()
+        for layer in model.modules():
+            if isinstance(layer, nn.BatchNorm2d):
+                layer.float()
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -364,10 +371,14 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # measure data loading time
         data_time.update(time.time() - end)
 
+        if args.fp16:
+            images = images.half()
+
         if args.gpu is not None and torch.cuda.device_count():
             images = images.cuda(args.gpu, non_blocking=True)
         if torch.cuda.device_count():
             target = target.cuda(args.gpu, non_blocking=True)
+
 
         # compute output
         output = model(images)
@@ -416,6 +427,9 @@ def validate(val_loader, model, criterion, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
+            if args.fp16:
+                images = images.half()                
+
             if args.gpu is not None:
                 if torch.cuda.device_count(): 
                     images = images.cuda(args.gpu, non_blocking=True)
