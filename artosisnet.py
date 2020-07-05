@@ -129,10 +129,18 @@ def main():
         main_worker(args.gpu, ngpus_per_node, args)
  
 
-def get_inference_model(model_path, arch='resnet18'):
+def get_inference_model(model_path, arch='resnet18', fp16=False):
     print("=> creating model '{}'".format(arch))
     model = models.__dict__[arch](num_classes=2)
     model = torch.nn.DataParallel(model)
+
+    if fp16:
+        print("fp16 mode")
+        model.half()
+        for layer in model.modules():
+            if isinstance(layer, nn.BatchNorm2d):
+                layer.float()
+
     if torch.cuda.device_count():
         model = model.cuda()
     print("=> loading checkpoint '{}'".format(model_path))
