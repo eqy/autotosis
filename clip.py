@@ -201,12 +201,12 @@ class Clip(object):
     #    assert len(jpg_inference_results) == len(jpg_filenames)
     #    return jpg_inference_results
 
-    def inference(self, model_path, audio_cutoff, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True):
+    def inference(self, model_path, audio_cutoff, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True, fp16=False):
         tempdir = f'temp{str(random.randint(0,2**32))}/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
-        inference_model = get_inference_model(model_path, arch)
+        inference_model = get_inference_model(model_path, arch, fp16)
         basename = os.path.splitext(os.path.basename(self.filename))[0]
         rounded_framerate = int(np.round(self.framerate))
         assert rounded_framerate % self.inference_frameskip == 0
@@ -272,6 +272,8 @@ class Clip(object):
         print(len(dataset), "data size")
         bar = Bar('inference progress', max=len(jpg_filenames))
         for samples, idxs in dataloader:
+            if fp16:
+                samples = samples.half()
             output = inference_model(samples)
             preds = torch.softmax(output, 1)
             for i in range(len(samples)): 
