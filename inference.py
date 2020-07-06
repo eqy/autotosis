@@ -32,7 +32,7 @@ def single_inference(args):
     else:
         clip = Clip(args.single_inference, text=text)
     clip.inference_frameskip = args.frameskip
-    clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
+    clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
     if args.benchmark:
         return
     clip.generate_annotated(args.name)
@@ -72,7 +72,7 @@ def highlights(args):
         else:
             clip = Clip(tempconcatvideo, text=text)
         clip.inference_frameskip = args.frameskip
-        clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
+        clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
@@ -88,7 +88,7 @@ def highlights(args):
         else:
             clip = Clip(path, text=text)
         clip.inference_frameskip = args.frameskip
-        clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full)
+        clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
         if args.benchmark:
             return
         clip.bin(args.bin_size)
@@ -122,19 +122,20 @@ def main():
     parser.add_argument("--gypsy", action='store_true')
     parser.add_argument("--artosis", action='store_true')
     parser.add_argument("--notext", action='store_true')
+    parser.add_argument("--fp16", action='store_true')
     args = parser.parse_args()
 
     # shorcut some defaults for strimmers
     if args.gypsy:
         assert not args.artosis
         assert not args.pog
-        args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
+        args.bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
         args.bin_size = 8
         args.threshold = 0.7
     if args.artosis:
         assert not args.gypsy
         assert not args.pog
-        args.bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
+        args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
         args.bin_size = 16
         args.threshold = 0.75
     if args.pog:
