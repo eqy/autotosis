@@ -206,102 +206,107 @@ class Clip(object):
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
 
-        inference_model = get_inference_model(model_path, arch, fp16)
-        basename = os.path.splitext(os.path.basename(self.filename))[0]
-        rounded_framerate = int(np.round(self.framerate))
-        assert rounded_framerate % self.inference_frameskip == 0
-        res_str = f'{self.width}x{self.height}'
-        inference_fps = int(np.round(self.framerate/self.inference_frameskip))
-        fps_str = f'fps={inference_fps}'
-        jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
-        sound_jpeg_str = os.path.join(tempdir, f'{basename}_sound_%d.jpg')
-        newbasename = basename + '_'
-        ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
-        print(ffmpeg_cmd)
-        subprocess.call(ffmpeg_cmd)
-        ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff}:{fps_str},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
-        subprocess.call(ffmpeg_spectro_cmd)
-        ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
-        subprocess.call(ffmpeg_sound_cmd)
-        os.unlink(f'{basename}_sound.mp4')
+        try:
+            inference_model = get_inference_model(model_path, arch, fp16)
+            basename = os.path.splitext(os.path.basename(self.filename))[0]
+            rounded_framerate = int(np.round(self.framerate))
+            assert rounded_framerate % self.inference_frameskip == 0
+            res_str = f'{self.width}x{self.height}'
+            inference_fps = int(np.round(self.framerate/self.inference_frameskip))
+            fps_str = f'fps={inference_fps}'
+            jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
+            sound_jpeg_str = os.path.join(tempdir, f'{basename}_sound_%d.jpg')
+            newbasename = basename + '_'
+            ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
+            print(ffmpeg_cmd)
+            subprocess.call(ffmpeg_cmd)
+            ffmpeg_spectro_cmd = ['ffmpeg', '-i', self.filename, '-filter_complex', f'[0:a]showspectrum=s=512x512:mode=combined:slide=scroll:saturation=0.2:scale=log:color=intensity:stop={audio_cutoff}:{fps_str},format=yuv420p[v]', '-map', '[v]', '-map', '0:a', '-b:v', '700k', '-b:a', '360k', f'{basename}_sound.mp4']
+            subprocess.call(ffmpeg_spectro_cmd)
+            ffmpeg_sound_cmd = ['ffmpeg', '-i', f'{basename}_sound.mp4', '-q:v', '1', '-vf', fps_str, sound_jpeg_str]
+            subprocess.call(ffmpeg_sound_cmd)
+            os.unlink(f'{basename}_sound.mp4')
 
-        print("duration:", self.duration)
-          
-        inference_results = None
-        inference_results = [list() for i in range(int(np.ceil(self.duration)))]
-        sound_filenames = None
-        
-        jpg_filenames = list()
-        time_idxs = list()
-        true_frame_nums = list()
-        if use_sound:
-            sound_filenames = list()
+            print("duration:", self.duration)
+              
+            inference_results = None
+            inference_results = [list() for i in range(int(np.ceil(self.duration)))]
+            sound_filenames = None
+            
+            jpg_filenames = list()
+            time_idxs = list()
+            true_frame_nums = list()
+            if use_sound:
+                sound_filenames = list()
 
-        for dirpath, dirnames, filenames in os.walk(tempdir):
-            print(len(filenames), "files")
-            #batch_count = 0
-            for filename in filenames:
-                if newbasename not in filename:
-                    continue
-                name, ext = os.path.splitext(filename)
-                if ext == '.jpg':
-                    if '_sound_' in filename:
+            for dirpath, dirnames, filenames in os.walk(tempdir):
+                print(len(filenames), "files")
+                #batch_count = 0
+                for filename in filenames:
+                    if newbasename not in filename:
                         continue
-                    jpg_filenames.append(os.path.join(dirpath, filename))
-                    frame_num = int(name.split(newbasename)[1]) - 1
-                    if sound_filenames is not None:
-                        offset = 1
-                        sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
-                        while not os.path.exists(sound_filename):
-                            offset -= 1
+                    name, ext = os.path.splitext(filename)
+                    if ext == '.jpg':
+                        if '_sound_' in filename:
+                            continue
+                        jpg_filenames.append(os.path.join(dirpath, filename))
+                        frame_num = int(name.split(newbasename)[1]) - 1
+                        if sound_filenames is not None:
+                            offset = 1
                             sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
-                            assert offset > -100, f'could not find {basename}_sound_{frame_num + 1}.jpg'
-                        sound_filenames.append(sound_filename)
-                        assert os.path.exists(sound_filenames[-1])
-                    time = (frame_num)/inference_fps
-                    true_frame_num = int((frame_num) * self.framerate/inference_fps)
-                    time_idx = int(time)
-                    time_idxs.append(time_idx)
-                    true_frame_nums.append(true_frame_num)
-        assert len(jpg_filenames) == len(time_idxs)
-        assert len(true_frame_nums) == len(time_idxs)
+                            while not os.path.exists(sound_filename):
+                                offset -= 1
+                                sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
+                                assert offset > -100, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                            sound_filenames.append(sound_filename)
+                            assert os.path.exists(sound_filenames[-1])
+                        time = (frame_num)/inference_fps
+                        true_frame_num = int((frame_num) * self.framerate/inference_fps)
+                        time_idx = int(time)
+                        time_idxs.append(time_idx)
+                        true_frame_nums.append(true_frame_num)
+            assert len(jpg_filenames) == len(time_idxs)
+            assert len(true_frame_nums) == len(time_idxs)
 
 
-        dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.bbox, concat_full=concat_full, sound_filenames=sound_filenames)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
-        print(len(dataset), "data size")
-        bar = Bar('inference progress', max=len(jpg_filenames))
-        for samples, idxs in dataloader:
-            if fp16:
-                samples = samples.half()
-            output = inference_model(samples)
-            preds = torch.softmax(output, 1)
-            for i in range(len(samples)): 
-                idx = idxs[i]
-                inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(preds[i][1])))
-                bar.next()
-        bar.finish()
-        max_len = 0
-        for i in range(len(inference_results)):
-            # sort each second by "true" frame number
-            inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
-            inference_results[i] = [res[1] for res in inference_results[i]]
-            if len(inference_results[i]) > max_len:
-                max_len = len(inference_results[i])
-        # mean padding
-        for i in range(len(inference_results)):
-            if len(inference_results[i]) < max_len:
-                mean = np.mean(inference_results[i])
-                while len(inference_results[i]) < max_len:
-                    inference_results[i].append(mean)
-        self.inference_results = inference_results
-        shutil.rmtree(tempdir)
-        del dataset
-        del dataloader
-        del output
-        del preds
-        del inference_model
-        torch.cuda.empty_cache()
+            dataset = InferenceFrames(jpg_filenames, crop, output_resolution, self.bbox, concat_full=concat_full, sound_filenames=sound_filenames)
+            dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True)
+            print(len(dataset), "data size")
+            bar = Bar('inference progress', max=len(jpg_filenames))
+            for samples, idxs in dataloader:
+                if fp16:
+                    samples = samples.half()
+                output = inference_model(samples)
+                preds = torch.softmax(output, 1)
+                for i in range(len(samples)): 
+                    idx = idxs[i]
+                    inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(preds[i][1])))
+                    bar.next()
+            bar.finish()
+            max_len = 0
+            for i in range(len(inference_results)):
+                # sort each second by "true" frame number
+                inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
+                inference_results[i] = [res[1] for res in inference_results[i]]
+                if len(inference_results[i]) > max_len:
+                    max_len = len(inference_results[i])
+            # mean padding
+            for i in range(len(inference_results)):
+                if len(inference_results[i]) < max_len:
+                    mean = np.mean(inference_results[i])
+                    while len(inference_results[i]) < max_len:
+                        inference_results[i].append(mean)
+            self.inference_results = inference_results
+            shutil.rmtree(tempdir)
+            del dataset
+            del dataloader
+            del output
+            del preds
+            del inference_model
+            torch.cuda.empty_cache()
+        except Exception as e:
+            print("exception raised, cleaning up...")
+            shutil.rmtree(tempdir)
+        
 
     def _drawtext(self, stream, second, second_preds, predskip=1):
         chunks = len(second_preds)//predskip
@@ -555,11 +560,11 @@ class Clip(object):
         return row
 
     def print_summary(self):
-        print(self.filename)
-        print(self.height, self.width)
-        print(self.framerate)
-        print(self.duration)
-        print(self.positive_segments)
+        print("path:", self.filename)
+        print("dims:", self.height, self.width)
+        print("fps:", self.framerate)
+        print("duration:", self.duration)
+        print("intervals:", self.positive_segments)
 
 
 def load_clip_from_csv_row(row):
