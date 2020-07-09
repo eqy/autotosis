@@ -125,25 +125,26 @@ def main():
     parser.add_argument("--fp16", action='store_true')
     args = parser.parse_args()
 
-    # shorcut some defaults for strimmers
+    # shortcut some defaults for strimmers
     if args.gypsy:
         assert not args.artosis
         assert not args.pog
         args.bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
         args.bin_size = 8
         args.threshold = 0.7
+        args.chill = True
     if args.artosis:
         assert not args.gypsy
         assert not args.pog
         args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
         args.bin_size = 16
-        args.threshold = 0.75
+        args.threshold = 0.8
     if args.pog:
         assert not args.gypsy
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
         args.bin_size = 5
-        args.threshold = 0.7
+        args.threshold = 0.5
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
