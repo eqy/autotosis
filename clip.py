@@ -80,7 +80,6 @@ class InferenceFrames(Dataset):
         return t, idx
 
 
-# TODO: avoid hardcoded 1920x1080 resolution
 class Clip(object):
     def __init__(self, filename, positive_segments=None,
                  bbox=DEFAULT_FACE_BBOX,
@@ -96,7 +95,6 @@ class Clip(object):
         self.bbox = bbox 
         self.text = text
         probe = ffmpeg.probe(filename)
-        #print(probe)
 
         for meta in probe['streams']:
             if meta['codec_type'] == 'video': 
@@ -193,13 +191,6 @@ class Clip(object):
                 bar.next()
         bar.finish()
         shutil.rmtree(sound_path)
-    #def _inference_jpg(self, inference_model, jpg_filenames, crop, output_resolution):
-    #    ims = list()
-    #    for filename in jpg_filenames:
-    #    preds = get_prediction(ims, inference_model)
-    #    jpg_inference_results = [float(preds[i,1]) for i in range(len(ims))]
-    #    assert len(jpg_inference_results) == len(jpg_filenames)
-    #    return jpg_inference_results
 
     def inference(self, model_path, audio_cutoff, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True, fp16=False):
         tempdir = f'temp{str(random.randint(0,2**32))}/'
@@ -240,7 +231,6 @@ class Clip(object):
 
             for dirpath, dirnames, filenames in os.walk(tempdir):
                 print(len(filenames), "files")
-                #batch_count = 0
                 for filename in filenames:
                     if newbasename not in filename:
                         continue
@@ -338,7 +328,7 @@ class Clip(object):
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             stream = self._drawtext(stream, i, second_preds)
-       #stream = ffmpeg.map_audio(stream, audio_stream)
+        # stream = ffmpeg.map_audio(stream, audio_stream)
         stream = ffmpeg.output(audio, stream, dest_path)
         stream = ffmpeg.overwrite_output(stream)
         ffmpeg.run(stream)
