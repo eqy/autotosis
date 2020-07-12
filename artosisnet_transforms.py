@@ -53,6 +53,7 @@ class PartialRandomResizedCrop(transforms.RandomResizedCrop):
         self.erase_scale = erase_scale
         self.erase_ratio = erase_ratio
         self.erase = RandomErasing2(p=1.0, scale=self.erase_scale, ratio=self.erase_ratio)
+        self.default_erase = transforms.RandomErasing()
         self.totensor = transforms.ToTensor()
         self.topil = transforms.ToPILImage()
         super(PartialRandomResizedCrop, self).__init__(size, scale, ratio, interpolation)
@@ -67,6 +68,7 @@ class PartialRandomResizedCrop(transforms.RandomResizedCrop):
             assert (idx+1)*square_dim <= height
             tempimg = img.crop((0, idx*square_dim, square_dim, (idx+1)*square_dim))
             tempimgrandcrop = super(PartialRandomResizedCrop, self).__call__(tempimg)
+            #tempimgrandcrop = self.topil(self.default_erase(self.totensor(tempimgrandcrop)))
             img.paste(tempimgrandcrop, (0, idx*square_dim))
         if self.segments*square_dim < height:
             tempimg = img.crop((0, self.segments*square_dim, square_dim, (self.segments+1)*square_dim))
@@ -82,9 +84,9 @@ class PartialRandomResizedCrop(transforms.RandomResizedCrop):
 
 def main():
     # quick test
-    pth = 'data/train/1/youkiddingme_1187.jpg'
-    pth2 = 'data_nosound/train/1/youkiddingme_1187.jpg'
-    tr = PartialRandomResizedCrop(256, scale=(0.5, 1.0), segments=2)
+    pth = 'data_noconcat_331/train/1/youkiddingme_1187.jpg'
+    pth2 = 'data_noconcat_331/train/1/youkiddingme_1187.jpg'
+    tr = PartialRandomResizedCrop(331, scale=(0.1, 1.0), segments=1)
     for i in range(0, 10):
         img = Image.open(pth)
         aug = tr(img)
