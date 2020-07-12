@@ -167,7 +167,7 @@ class Clip(object):
                     time = frame_num/self.framerate
                     label = '0'
                     for interval in self.positive_segments:
-                        if time >= interval[0] and time <= interval[1]:
+                        if time >= interval[0] and time < interval[1]:
                             label = '1'
                             break
                     dst = os.path.join(dest_path, label)
