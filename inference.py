@@ -28,9 +28,9 @@ def single_inference(args):
         text = 'pog'
         assert not args.chill
     if args.bbox is not None:
-        clip = Clip(args.single_inference, bbox=ast.literal_eval(args.bbox), text=text)
+        clip = Clip(args.single_inference, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
     else:
-        clip = Clip(args.single_inference, text=text)
+        clip = Clip(args.single_inference, text=text, uncap=args.uncap)
     clip.inference_frameskip = args.frameskip
     clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
     if args.benchmark:
@@ -57,6 +57,8 @@ def highlights(args):
     text = 'salt'
     if args.chill:
         text = 'chill'
+    if args.pog:
+        text = 'pog'
 
     if len(paths) >= 1:
         print("joining videos...")
@@ -68,9 +70,9 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         if args.bbox is not None:
-            clip = Clip(tempconcatvideo, bbox=ast.literal_eval(args.bbox), text=text)
+            clip = Clip(tempconcatvideo, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
         else:
-            clip = Clip(tempconcatvideo, text=text)
+            clip = Clip(tempconcatvideo, text=text, uncap=args.uncap)
         clip.inference_frameskip = args.frameskip
         clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
         if args.benchmark:
@@ -84,9 +86,9 @@ def highlights(args):
     else:
         path = args.prefix
         if args.bbox is not None:
-            clip = Clip(path, bbox=ast.literal_eval(args.bbox), text=text)
+            clip = Clip(path, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
         else:
-            clip = Clip(path, text=text)
+            clip = Clip(path, text=text, uncap=args.uncap)
         clip.inference_frameskip = args.frameskip
         clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
         if args.benchmark:
@@ -123,12 +125,14 @@ def main():
     parser.add_argument("--artosis", action='store_true')
     parser.add_argument("--notext", action='store_true')
     parser.add_argument("--fp16", action='store_true')
+    parser.add_argument("--uncap", action='store_true', help='meme uncapped softmax')
     args = parser.parse_args()
 
     # shortcut some defaults for strimmers
     if args.gypsy:
         assert not args.artosis
         assert not args.pog
+        assert 'gyp' in args.model_path
         args.bbox = "[0.77109375, 0.6875, 0.98828125, 1.0]"
         args.bin_size = 8
         args.threshold = 0.7
@@ -144,7 +148,7 @@ def main():
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
         args.bin_size = 5
-        args.threshold = 0.5
+        args.threshold = 0.6
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:

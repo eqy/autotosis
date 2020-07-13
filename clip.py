@@ -14,7 +14,7 @@ from PIL import Image
 # 'ffmpeg-python', not 'ffmpeg' in pip
 import ffmpeg
 
-from artosisnet import get_inference_model, get_prediction
+from artosisnet import get_inference_model
 
 INFERENCE_FRAMESKIP = 30
 #DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
@@ -84,7 +84,8 @@ class Clip(object):
     def __init__(self, filename, positive_segments=None,
                  bbox=DEFAULT_FACE_BBOX,
                  inference_frameskip=INFERENCE_FRAMESKIP,
-                 text='salt'):
+                 text='salt',
+                 uncap=False):
         self.filename = filename
         if not os.path.exists(self.filename):
             raise ValueError('clip source not found')
@@ -94,6 +95,7 @@ class Clip(object):
             self.positive_segments = list()
         self.bbox = bbox 
         self.text = text
+        self.uncap = uncap
         probe = ffmpeg.probe(filename)
 
         for meta in probe['streams']:
@@ -103,8 +105,10 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 270
-        self.box_width += min(0, len(self.text) - 4)*8
+        self.box_width = 260
+        if self.uncap:
+            self.box_width = 390
+        self.box_width += min(0, len(self.text) - 4)*10
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
@@ -114,6 +118,8 @@ class Clip(object):
             self.nb_frames = int(video_meta['nb_frames'])
         else:
             self.nb_frames = int(float(video_meta['duration'])*self.framerate)
+        self.inference_results = None
+        self.diff_inference_results = None
 
     def read_frame_as_jpg(self, frame_num):
         out, err = (
@@ -219,8 +225,9 @@ class Clip(object):
 
             print("duration:", self.duration)
               
-            inference_results = None
             inference_results = [list() for i in range(int(np.ceil(self.duration)))]
+            # currently strictly for meme purposes only
+            diff_inference_results = [list() for i in range(int(np.ceil(self.duration)))]
             sound_filenames = None
             
             jpg_filenames = list()
@@ -267,25 +274,38 @@ class Clip(object):
                     samples = samples.half()
                 output = inference_model(samples)
                 preds = torch.softmax(output, 1)
+                exponentiated = torch.exp(output)
+                diff_preds = exponentiated[:,1] - exponentiated[:,0]
                 for i in range(len(samples)): 
                     idx = idxs[i]
                     inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(preds[i][1])))
+                    diff_inference_results[time_idxs[idx]].append((true_frame_nums[idx], float(diff_preds[i])))
                     bar.next()
             bar.finish()
             max_len = 0
             for i in range(len(inference_results)):
                 # sort each second by "true" frame number
+                # if this grows, consider aggregating all types of inference results into one structure
                 inference_results[i] = sorted(inference_results[i], key=lambda item:item[0])
                 inference_results[i] = [res[1] for res in inference_results[i]]
+                diff_inference_results[i] = sorted(diff_inference_results[i], key=lambda item:item[0])
+                diff_inference_results[i] = [res[1] for res in diff_inference_results[i]]
                 if len(inference_results[i]) > max_len:
                     max_len = len(inference_results[i])
+                # twin shapes
+                assert len(diff_inference_results[i]) <= max_len
             # mean padding
             for i in range(len(inference_results)):
                 if len(inference_results[i]) < max_len:
+                    # twin shapes again
+                    assert len(diff_inference_results[i]) == len(inference_results[i])
                     mean = np.mean(inference_results[i])
+                    diff_mean = np.mean(diff_inference_results[i]) 
                     while len(inference_results[i]) < max_len:
                         inference_results[i].append(mean)
+                        diff_inference_results[i].append(diff_mean)
             self.inference_results = inference_results
+            self.diff_inference_results = diff_inference_results
             shutil.rmtree(tempdir)
             del dataset
             del dataloader
@@ -299,7 +319,7 @@ class Clip(object):
             raise e
         
 
-    def _drawtext(self, stream, second, second_preds, predskip=1):
+    def _drawtext(self, stream, second, second_preds, diff_preds, predskip=1):
         chunks = len(second_preds)//predskip
         chunksiz = 1.0/chunks
         for j in range(0, chunks):
@@ -315,7 +335,12 @@ class Clip(object):
             disp_pred = pred
             if self.text != 'salt' and self.text != 'pog':
                 disp_pred = 1.0 - pred
-            stream = stream.drawtext(text=f"{self.text}: {disp_pred:.3f}", x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            if self.uncap:
+                disp_pred = diff_preds[j*predskip]
+                text = f"{self.text}: {disp_pred:.3e}" 
+            else:
+                text = f"{self.text}: {disp_pred:.3f}" 
+            stream = stream.drawtext(text=text, x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -328,7 +353,8 @@ class Clip(object):
         stream = stream.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
-            stream = self._drawtext(stream, i, second_preds)
+            diff_preds = self.diff_inference_results[i]
+            stream = self._drawtext(stream, i, second_preds, diff_preds)
         # stream = ffmpeg.map_audio(stream, audio_stream)
         stream = ffmpeg.output(audio, stream, dest_path)
         stream = ffmpeg.overwrite_output(stream)
@@ -383,7 +409,9 @@ class Clip(object):
 
             for i in range(start, end):
                 second_preds = self.inference_results[i]
-                vid = self._drawtext(vid, i-start, second_preds, predskip)
+                diff_preds = self.diff_inference_results[i]
+
+                vid = self._drawtext(vid, i-start, second_preds, diff_preds, predskip)
              
         aud = (
             input_stream.audio
