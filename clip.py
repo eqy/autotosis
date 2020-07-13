@@ -107,7 +107,7 @@ class Clip(object):
         self.width = int(video_meta['width'])
         self.box_width = 260
         if self.uncap:
-            self.box_width = 390
+            self.box_width = 410
         self.box_width += min(0, len(self.text) - 4)*10
         self.box_height = 80
         # WOW, this looks unsafe
