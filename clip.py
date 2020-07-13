@@ -296,6 +296,7 @@ class Clip(object):
         except Exception as e:
             print("exception raised, cleaning up...")
             shutil.rmtree(tempdir)
+            raise e
         
 
     def _drawtext(self, stream, second, second_preds, predskip=1):
