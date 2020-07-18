@@ -311,6 +311,8 @@ class Clip(object):
             del dataloader
             del output
             del preds
+            del exponentiated
+            del diff_preds
             del inference_model
             torch.cuda.empty_cache()
         except Exception as e:
