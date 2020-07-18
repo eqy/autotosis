@@ -108,7 +108,7 @@ class Clip(object):
         self.box_width = 260
         if self.uncap:
             self.box_width = 410
-        self.box_width += min(0, len(self.text) - 4)*20
+        self.box_width += min(0, len(self.text) - 4)*30
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
