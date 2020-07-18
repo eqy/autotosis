@@ -141,14 +141,14 @@ def main():
         assert not args.gypsy
         assert not args.pog
         args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
-        args.bin_size = 16
-        args.threshold = 0.8
+        args.bin_size = 18
+        args.threshold = 0.75
     if args.pog:
         assert not args.gypsy
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
-        args.bin_size = 5
-        args.threshold = 0.6
+        args.bin_size = 10
+        args.threshold = 0.5
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
