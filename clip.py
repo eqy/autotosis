@@ -603,7 +603,8 @@ def load_clip_from_csv_row(row):
                 assert positive_segments[-1][1] <= segment[0]
             positive_segments.append(segment)
 
-    return Clip(filename, positive_segments, bbox)
+    # default uncap true for max text box width
+    return Clip(filename, positive_segments, bbox, uncap=True)
 
 
 def main():
