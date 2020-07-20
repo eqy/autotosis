@@ -113,11 +113,14 @@ class Clip(object):
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
         self.inference_frameskip = inference_frameskip
-        self.duration = float(video_meta['duration'])
+        if 'duration' not in video_meta:
+            self.duration = float(probe['format']['duration'])
+        else:
+            self.duration = float(video_meta['duration'])
         if 'nb_frames' in video_meta:
             self.nb_frames = int(video_meta['nb_frames'])
         else:
-            self.nb_frames = int(float(video_meta['duration'])*self.framerate)
+            self.nb_frames = int(self.duration*self.framerate)
         self.inference_results = None
         self.diff_inference_results = None
 
