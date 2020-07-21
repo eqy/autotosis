@@ -209,8 +209,7 @@ class Clip(object):
         #if not os.path.exists(tempdir):
         #    os.makedirs(tempdir)
 
-        with TemporaryDirectory() as temp_dir:
-            tempdirname = temp_dir.name 
+        with TemporaryDirectory() as tempdir:
             inference_model = get_inference_model(model_path, arch, fp16)
             basename = os.path.splitext(os.path.basename(self.filename))[0]
             rounded_framerate = int(np.round(self.framerate))
@@ -218,8 +217,8 @@ class Clip(object):
             res_str = f'{self.width}x{self.height}'
             inference_fps = int(np.round(self.framerate/self.inference_frameskip))
             fps_str = f'fps={inference_fps}'
-            jpeg_str = os.path.join(tempdirname, f'{basename}_%d.jpg')
-            sound_jpeg_str = os.path.join(tempdirname, f'{basename}_sound_%d.jpg')
+            jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
+            sound_jpeg_str = os.path.join(tempdir, f'{basename}_sound_%d.jpg')
             newbasename = basename + '_'
             ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
             print(ffmpeg_cmd)
@@ -243,7 +242,7 @@ class Clip(object):
             if use_sound:
                 sound_filenames = list()
 
-            for dirpath, dirnames, filenames in os.walk(tempdirname):
+            for dirpath, dirnames, filenames in os.walk(tempdir):
                 print(len(filenames), "files")
                 for filename in filenames:
                     if newbasename not in filename:
