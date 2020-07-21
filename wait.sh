@@ -1,7 +1,8 @@
 #!/bin/bash
-while [ $(nvidia-smi | grep python3 | wc -l) -gt 0  ]
+gpu=$1
+while [ $(gpustat | grep $gpu | awk '{print $10}') -gt 0  ]
 do
-    echo 'waiting at' $(date) >> wait.log
+    echo 'waiting at' $(date) #>> wait.log
     sleep 5
 done
 echo 'finished waiting at' $(date) >> wait.log
