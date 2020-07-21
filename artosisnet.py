@@ -286,6 +286,9 @@ def main_worker(gpu, ngpus_per_node, args):
     if 'noconcat' in args.data:
         segments = 1
         print("not using full concat...", f"segments={segments}")
+    elif 'nosound' in args.data:
+        segments = 1
+        print("not using sound...", f"segments={segments}")
     else:
         print("using full concat...", f"segments={segments}")
 
