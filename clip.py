@@ -4,6 +4,8 @@ import csv
 import os
 import random
 import subprocess
+from temptile import TemporaryDirectory()
+
 import shutil
 import numpy as np
 import torch
@@ -105,10 +107,10 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 260
+        self.box_width = 300
         if self.uncap:
             self.box_width = 410
-        self.box_width += min(0, len(self.text) - 4)*30
+        self.box_width += min(0, len(self.text) - 4)*20
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
@@ -202,11 +204,13 @@ class Clip(object):
         shutil.rmtree(sound_path)
 
     def inference(self, model_path, audio_cutoff, arch='resnet18', crop=True, output_resolution=256, batch_size=64, concat_full=True, use_sound=True, fp16=False):
-        tempdir = f'temp{str(random.randint(0,2**32))}/'
-        if not os.path.exists(tempdir):
-            os.makedirs(tempdir)
 
-        try:
+        #tempdir = f'temp{str(random.randint(0,2**32))}/'
+        #if not os.path.exists(tempdir):
+        #    os.makedirs(tempdir)
+
+        with TemporaryDirectory() as temp_dir:
+            tempdirname = temp_dir.name 
             inference_model = get_inference_model(model_path, arch, fp16)
             basename = os.path.splitext(os.path.basename(self.filename))[0]
             rounded_framerate = int(np.round(self.framerate))
@@ -214,8 +218,8 @@ class Clip(object):
             res_str = f'{self.width}x{self.height}'
             inference_fps = int(np.round(self.framerate/self.inference_frameskip))
             fps_str = f'fps={inference_fps}'
-            jpeg_str = os.path.join(tempdir, f'{basename}_%d.jpg')
-            sound_jpeg_str = os.path.join(tempdir, f'{basename}_sound_%d.jpg')
+            jpeg_str = os.path.join(tempdirname, f'{basename}_%d.jpg')
+            sound_jpeg_str = os.path.join(tempdirname, f'{basename}_sound_%d.jpg')
             newbasename = basename + '_'
             ffmpeg_cmd = ['ffmpeg', '-i', self.filename, '-s', res_str, '-q:v', '10', '-vf', fps_str, jpeg_str]
             print(ffmpeg_cmd)
@@ -239,7 +243,7 @@ class Clip(object):
             if use_sound:
                 sound_filenames = list()
 
-            for dirpath, dirnames, filenames in os.walk(tempdir):
+            for dirpath, dirnames, filenames in os.walk(tempdirname):
                 print(len(filenames), "files")
                 for filename in filenames:
                     if newbasename not in filename:
@@ -309,7 +313,6 @@ class Clip(object):
                         diff_inference_results[i].append(diff_mean)
             self.inference_results = inference_results
             self.diff_inference_results = diff_inference_results
-            shutil.rmtree(tempdir)
             del dataset
             del dataloader
             del output
@@ -318,10 +321,6 @@ class Clip(object):
             del diff_preds
             del inference_model
             torch.cuda.empty_cache()
-        except Exception as e:
-            print("exception raised, cleaning up...")
-            shutil.rmtree(tempdir)
-            raise e
         
 
     def _drawtext(self, stream, second, second_preds, diff_preds, predskip=1):
