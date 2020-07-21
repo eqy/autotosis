@@ -4,7 +4,7 @@ import csv
 import os
 import random
 import subprocess
-from temptile import TemporaryDirectory()
+from tempfile import TemporaryDirectory
 
 import shutil
 import numpy as np
