@@ -6,6 +6,7 @@ from clip import Clip
 import random
 
 import ffmpeg
+import torch
 
 sys.setrecursionlimit(10**6)
 
@@ -126,7 +127,12 @@ def main():
     parser.add_argument("--notext", action='store_true')
     parser.add_argument("--fp16", action='store_true')
     parser.add_argument("--uncap", action='store_true', help='meme uncapped softmax')
+    parser.add_argument("--nowaitgpu", action='store_true', help='do not wait for at least 1 gpu')
     args = parser.parse_args()
+
+    if not args.nowaitgpu:
+        while not torch.cuda.device_count():
+            print("waiting for gpu to be available...")
 
     # shortcut some defaults for strimmers
     if args.gypsy:
@@ -148,7 +154,7 @@ def main():
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
         args.bin_size = 10
-        args.threshold = 0.5
+        args.threshold = 0.6
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
