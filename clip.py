@@ -107,7 +107,7 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 300
+        self.box_width = 320
         if self.uncap:
             self.box_width = 410
         self.box_width += min(0, len(self.text) - 4)*20
