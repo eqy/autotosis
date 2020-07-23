@@ -2,6 +2,7 @@ import argparse
 import ast
 import os
 import sys
+import time
 from clip import Clip
 import random
 
@@ -132,7 +133,9 @@ def main():
 
     if not args.nowaitgpu:
         while not torch.cuda.device_count():
+            print(torch.cuda.device_count())
             print("waiting for gpu to be available...")
+            time.sleep(1)
 
     # shortcut some defaults for strimmers
     if args.gypsy:
@@ -153,7 +156,7 @@ def main():
         assert not args.gypsy
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
-        args.bin_size = 10
+        args.bin_size = 14
         args.threshold = 0.6
 
     assert args.single_inference is not None or args.prefix is not None
