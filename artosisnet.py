@@ -87,6 +87,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 parser.add_argument('--fp16', action='store_true')
+parser.add_argument('--nowaitgpu', action='store_true')
 
 
 best_precision = 0
@@ -96,6 +97,11 @@ best_acc1 = 0
 
 def main():
     args = parser.parse_args()
+
+    if not args.nowaitgpu:
+        while not torch.cuda.device_count():
+            time.sleep(5)
+            print("waiting for gpu to be available...")
 
     if args.seed is not None:
         random.seed(args.seed)
