@@ -7,6 +7,7 @@ from clip import Clip
 import random
 
 import ffmpeg
+import numpy as np
 import torch
 
 sys.setrecursionlimit(10**6)
@@ -18,6 +19,20 @@ def _join_videos(listpath, outputpath):
         .output(outputpath, c='copy')
         .overwrite_output()
         .run()
+    )
+
+
+def _concat_highlights(paths, output_path):
+    tempfile = 'highlightconcatlist'
+    with open(tempfile, 'w') as f:
+        for path in paths:
+            f.write(f'file \'{path}\'\n')
+    (
+    ffmpeg
+    .input(tempfile, format='concat', safe=0)
+    .output(output_path, c='copy')
+    .overwrite_output()
+    .run()
     )
 
 
@@ -35,9 +50,12 @@ def single_inference(args):
         clip = Clip(args.single_inference, text=text, uncap=args.uncap)
     clip.inference_frameskip = args.frameskip
     clip.inference(args.model_path, audio_cutoff=args.audio_cutoff, arch=args.arch, batch_size=args.batch_size, use_sound=not args.no_sound, concat_full=args.concat_full, fp16=args.fp16)
+    averages = [np.mean(second) for second in clip.inference_results]
+    average = np.mean(averages)
     if args.benchmark:
         return
     clip.generate_annotated(args.name)
+    print("clip average:", average)
 
 
 def highlights(args):
@@ -82,7 +100,7 @@ def highlights(args):
         clip.bin(args.bin_size)
         print(clip.bins)
         #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adacjent)
-        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp, notext=args.notext)
+        temp_clips = clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, notext=args.notext)
         os.unlink(tempconcatvideo)
         os.unlink(tempvideolist)
     else:
@@ -97,8 +115,13 @@ def highlights(args):
             return
         clip.bin(args.bin_size)
         print(clip.bins)
-        #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adjacent)
-        clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, delete_temp=args.delete_temp, notext=args.notext)
+        #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, adjacent=not args.no_adjacent)
+        temp_clips = clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, notext=args.notext)
+
+    if args.delete_temp:
+        for temp_clip_path in temp_clips:
+            os.unlink(temp_clip_path)
+
 
 
 
@@ -129,6 +152,7 @@ def main():
     parser.add_argument("--fp16", action='store_true')
     parser.add_argument("--uncap", action='store_true', help='meme uncapped softmax')
     parser.add_argument("--nowaitgpu", action='store_true', help='do not wait for at least 1 gpu')
+    parser.add_argument("--crossfade", action='store_true', help='use crossfade concat')
     args = parser.parse_args()
 
     if not args.nowaitgpu:
@@ -151,12 +175,12 @@ def main():
         assert not args.pog
         args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
         args.bin_size = 18
-        args.threshold = 0.75
+        args.threshold = 0.7
     if args.pog:
         assert not args.gypsy
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
-        args.bin_size = 14
+        args.bin_size = 18
         args.threshold = 0.6
 
     assert args.single_inference is not None or args.prefix is not None
