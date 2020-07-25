@@ -426,22 +426,8 @@ class Clip(object):
         output = ffmpeg.output(joined[0], joined[1], dest)
         # output = ffmpeg.overwrite_output(output)
         output.run() 
-
-    def _concat_highlights(self, paths, output_path):
-        tempfile = 'highlightconcatlist'
-        with open(tempfile, 'w') as f:
-            for path in paths:
-                f.write(f'file \'{path}\'\n')
-        (
-        ffmpeg
-        .input(tempfile, format='concat', safe=0)
-        .output(output_path, c='copy')
-        .overwrite_output()
-        .run()
-        )
-
     
-    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', delete_temp=False, granularity=1, notext=False):
+    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', granularity=1, notext=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -496,16 +482,10 @@ class Clip(object):
 
                 i += 1
                 start_time = end_time
-
-        self._concat_highlights(temp_clips, output_path)
-
-        if delete_temp:
-            for temp_clip_path in temp_clips:
-                os.unlink(temp_clip_path)
-        
+        return temp_clips
 
     # TODO: avoid having to pass bin size to this function?
-    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', delete_temp=False, notext=False):
+    def generate_highlights(self, bin_size=5, adjacent=True, percentile=0.995, threshold=0.500, output_path='output.mp4', notext=False):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -545,13 +525,7 @@ class Clip(object):
                 temp_clips.append(dest)
                 for t in range(start_time, end_time, bin_size):
                     processed.add(t)
-        
-        self._concat_highlights(temp_clips, output_path)
-
-        if delete_temp:
-            for temp_clip_path in temp_clips:
-                os.unlink(temp_clip_path)
-        
+                
     def generate_data(self, dest_path):
         # basically don't use this, frame by frame is too goddamn slow
         raise Exception
