@@ -5,6 +5,7 @@ import sys
 import time
 from clip import Clip
 import random
+import subprocess
 
 import ffmpeg
 import numpy as np
@@ -34,6 +35,15 @@ def _concat_highlights(paths, output_path):
     .overwrite_output()
     .run()
     )
+
+
+def _crossfade_concat_highlights(paths, output_path):
+    command = ['xvfb-run', '-s', '-ac -screen 1 1920x1080x24', 'ffmpeg-concat']
+    for path in paths:
+        command.append(path)
+    command += ['-o', output_path]
+    print(command)
+    subprocess.call(command)
 
 
 def single_inference(args):
@@ -121,8 +131,11 @@ def highlights(args):
     if args.delete_temp:
         for temp_clip_path in temp_clips:
             os.unlink(temp_clip_path)
-
-
+    
+    if args.crossfade:
+        _crossfade_concat_highlights(temp_clips, args.name)
+    else:
+        _concat_highlights(temp_clips, args.name)
 
 
 def main():
@@ -181,7 +194,7 @@ def main():
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
         args.bin_size = 18
-        args.threshold = 0.6
+        args.threshold = 0.65
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
