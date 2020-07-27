@@ -5,6 +5,7 @@ import sys
 import time
 from clip import Clip
 import random
+import shutil
 import subprocess
 
 import ffmpeg
@@ -131,11 +132,15 @@ def highlights(args):
     if args.delete_temp:
         for temp_clip_path in temp_clips:
             os.unlink(temp_clip_path)
-    
-    if args.crossfade:
-        _crossfade_concat_highlights(temp_clips, args.name)
-    else:
-        _concat_highlights(temp_clips, args.name)
+
+    if len(temp_clips):
+        if len(temp_clips) > 1:
+            if args.crossfade:
+                _crossfade_concat_highlights(temp_clips, args.name)
+            else:
+                _concat_highlights(temp_clips, args.name)
+        else:
+            shutil.copy(temp_clips[0], args.name)
 
 
 def main():
@@ -193,8 +198,9 @@ def main():
         assert not args.gypsy
         assert not args.artosis
         args.bbox = "[0.0, 0.0, 1.0, 1.0]"
-        args.bin_size = 18
-        args.threshold = 0.65
+        args.bin_size = 20
+        args.threshold = 0.75
+        args.frameskip = 6
 
     assert args.single_inference is not None or args.prefix is not None
     if args.single_inference is not None:
