@@ -107,10 +107,10 @@ class Clip(object):
         # get metadata for video clip
         self.height = int(video_meta['height'])
         self.width = int(video_meta['width'])
-        self.box_width = 320
+        self.box_width = 275
         if self.uncap:
             self.box_width = 410
-        self.box_width += min(0, len(self.text) - 4)*10
+        self.box_width += min(0, len(self.text) - 4)*20
         self.box_height = 80
         # WOW, this looks unsafe
         self.framerate = eval(video_meta['avg_frame_rate'])
@@ -196,7 +196,7 @@ class Clip(object):
                         while not os.path.exists(sound_dst):
                             offset -= 1
                             sound_dst = os.path.join(sound_path, f'{basename}_sound_{frame_num + offset}.jpg')
-                            assert offset > -240, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                            assert offset > -300, f'could not find {basename}_sound_{frame_num + 1}.jpg'
                     im2 = frame_to_img(dst, output_resolution, crop, self.bbox, blackout_dims, concat_full=concat_full, sound_filename=sound_dst)
                     im2.save(dst, quality=95)
                 bar.next()
@@ -212,7 +212,8 @@ class Clip(object):
         with TemporaryDirectory() as tempdir:
             inference_model = get_inference_model(model_path, arch, fp16)
             basename = os.path.splitext(os.path.basename(self.filename))[0]
-            rounded_framerate = int(np.round(self.framerate))
+            # rounded_framerate = int(np.round(self.framerate))
+            rounded_framerate = int(np.ceil(self.framerate))
             assert rounded_framerate % self.inference_frameskip == 0
             res_str = f'{self.width}x{self.height}'
             inference_fps = int(np.round(self.framerate/self.inference_frameskip))
@@ -259,7 +260,7 @@ class Clip(object):
                             while not os.path.exists(sound_filename):
                                 offset -= 1
                                 sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
-                                assert offset > -240, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                                assert offset > -300, f'could not find {basename}_sound_{frame_num + 1}.jpg'
                             sound_filenames.append(sound_filename)
                             assert os.path.exists(sound_filenames[-1])
                         time = (frame_num)/inference_fps
@@ -459,7 +460,9 @@ class Clip(object):
             end_idx = int(end_time//granularity)
             cur_preds = [segment[1] for segment in segments[start_idx:end_idx]]
             cur_mean = np.mean(cur_preds)
-            if cur_mean < threshold:
+            if np.isnan(cur_mean):
+                print(f"warning, encountered NaN at time {start_idx*granularity}")
+            if cur_mean < threshold or np.isnan(cur_mean):
                 start_time += granularity
             else:
                 additional = granularity
