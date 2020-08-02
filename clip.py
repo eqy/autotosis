@@ -454,6 +454,7 @@ class Clip(object):
         basename = os.path.splitext(os.path.basename(self.filename))[0] + '_h'
         temp_clips = list()
         i = 0
+        log_list = list()
         while start_time + bin_size < total_time:
             end_time = start_time + bin_size
             start_idx = int(start_time//granularity)
@@ -479,12 +480,16 @@ class Clip(object):
                     end_idx = int(end_time//granularity)
                 print(cur_preds)
                 print(start_time, end_time)
+                log_list.append((start_time, end_time))
                 dest = os.path.join(tempdir, f'{basename}{i}.mp4')
                 self._safetrim(dest, start=start_time, end=end_time, notext=notext)
                 temp_clips.append(dest)
 
                 i += 1
                 start_time = end_time
+        with open(f'{basename}_log.txt', 'w') as f:
+            f.writelines(str(clip) + '\n' for clip in log_list)
+
         return temp_clips
 
     # TODO: avoid having to pass bin size to this function?
