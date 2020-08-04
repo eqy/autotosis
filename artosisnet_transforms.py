@@ -48,14 +48,16 @@ class RandomErasing2(transforms.RandomErasing):
 class PartialRandomResizedCrop(transforms.RandomResizedCrop):
     """Crop only the top segment(s) of a stacked image"""
     
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR, segments=2, erase_scale=(0.1, 1.0), erase_ratio=(0.001, 100.0)):
+    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR, segments=2, erase_scale=(0.1, 1.0), erase_ratio=(0.001, 100.0), horizontalflip=True):
         self.segments = segments
         self.erase_scale = erase_scale
         self.erase_ratio = erase_ratio
         self.erase = RandomErasing2(p=1.0, scale=self.erase_scale, ratio=self.erase_ratio)
         self.default_erase = transforms.RandomErasing()
         self.totensor = transforms.ToTensor()
+        self.horizontalflip = transforms.RandomHorizontalFlip()
         self.topil = transforms.ToPILImage()
+        self.colorjitter = transforms.ColorJitter(0.1, 0.1, 0.05)
         super(PartialRandomResizedCrop, self).__init__(size, scale, ratio, interpolation)
 
     def __call__(self, img):
@@ -69,7 +71,11 @@ class PartialRandomResizedCrop(transforms.RandomResizedCrop):
             tempimg = img.crop((0, idx*square_dim, square_dim, (idx+1)*square_dim))
             tempimgrandcrop = super(PartialRandomResizedCrop, self).__call__(tempimg)
             #tempimgrandcrop = self.topil(self.default_erase(self.totensor(tempimgrandcrop)))
+            #tempimgrandcrop = self.colorjitter(tempimgrandcrop)
+            if self.horizontalflip:
+                tempimgrandcrop = self.horizontalflip(tempimgrandcrop)
             img.paste(tempimgrandcrop, (0, idx*square_dim))
+        # if there is sound, apply randomerasing
         if self.segments*square_dim < height:
             tempimg = img.crop((0, self.segments*square_dim, square_dim, (self.segments+1)*square_dim))
             tempimgranderase = self.topil(self.erase(self.totensor(tempimg)))
