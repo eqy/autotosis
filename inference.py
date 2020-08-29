@@ -191,7 +191,8 @@ def main():
     if args.artosis:
         assert not args.gypsy
         assert not args.pog
-        args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
+        # args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
+        args.bbox = "[0.7572916666666667, 0.12407407407407407, 0.9854166666666667, 0.4564814814814815]"
         args.bin_size = 18
         args.threshold = 0.7
     if args.pog:
