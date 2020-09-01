@@ -409,7 +409,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         #recall.update(rec, rec_weight)
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
+        # optimizer.zero_grad()
+        for param in model.parameters():
+            param.grad = None
         loss.backward()
         optimizer.step()
 
