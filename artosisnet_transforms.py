@@ -1,8 +1,50 @@
 import math
 import numbers
 import random
+import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
+from skimage.color import rgba2rgb
+from skimage.metrics import structural_similarity as ssim
+
+
+class SceneCropCallback():
+    def __init__(self, references, reference_bboxes, key):
+        self.references = [Image.open(reference) for reference in references]
+        self.reference_bboxes = reference_bboxes
+        for idx, ref in enumerate(self.references):
+            self.references[idx] = np.asarray(ref.resize((192, 108)))
+            # convert RGBA to RGB if needed
+            if self.references[idx].shape[-1] == 4:
+                self.references[idx] = rgba2rgb(self.references[idx])
+        self.key = key
+
+    def crop(self, img):
+        max_ssim = 0
+        bbox = None
+        resized = np.asarray(img.resize((192, 108)))
+        height = img.height
+        width = img.width
+        for idx, ref in enumerate(self.references):
+            cur_ssim = ssim(ref, resized, multichannel=True)
+            if cur_ssim > max_ssim:
+                max_ssim = cur_ssim
+                bbox = self.reference_bboxes[idx]
+        pil_bbox = [np.round(bbox[0]*width),
+                    np.round(bbox[1]*height),
+                    np.round(bbox[2]*width),
+                    np.round(bbox[3]*height)]
+        return img.crop(bbox)
+
+
+artosis_callback = SceneCropCallback(['reference_frames/artosis_bwmenu.jpg', 'reference_frames/artosis_ingame1_canonical.jpg', 'reference_frames/artosis_ingame2_canonical.png'],
+                                    [[0.3307291666666667, 0.6398148148148148, 0.6177083333333333, 1.0],
+                                     [0.7572916666666667, 0.12407407407407407, 0.9854166666666667, 0.4564814814814815],
+                                     [0.7833, 0.1296, 0.9682, 0.3694]],
+                                    'artosis_callback')
+
+crop_callbacks = dict()
+crop_callbacks[artosis_callback.key] = artosis_callback
 
 
 class RandomErasing2(transforms.RandomErasing):
