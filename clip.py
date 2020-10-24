@@ -17,6 +17,7 @@ from PIL import Image
 import ffmpeg
 
 from artosisnet import get_inference_model
+from artosisnet_transforms import SceneCropCallback
 
 INFERENCE_FRAMESKIP = 30
 #DEFAULT_FACE_BBOX = [0.7635, 0.1056, 0.9802, 0.4009]
@@ -27,7 +28,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blackout_dims=None, concat_full=False, sound_filename=None):
+def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blackout_dims=None, concat_full=False, sound_filename=None, force_sound=False):
     im = Image.open(filename)
     if blackout_dims is not None:
         box = Image.new('RGB', (blackout_dims[2], blackout_dims[3]), 'black')
@@ -35,10 +36,13 @@ def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blacko
     height = im.height
     width = im.width
     if crop:
-        im2 = im.crop((int(crop_bbox[0]*width),
-                       int(crop_bbox[1]*height),
-                       int(crop_bbox[2]*width),
-                       int(crop_bbox[3]*height)))
+        if isinstance(crop_bbox, SceneCropCallback):
+            im2 = crop_bbox.crop(im)
+        else:
+            im2 = im.crop((int(crop_bbox[0]*width),
+                           int(crop_bbox[1]*height),
+                           int(crop_bbox[2]*width),
+                           int(crop_bbox[3]*height)))
         im2 = im2.resize((output_resolution, output_resolution))
         im3 = im.resize((output_resolution, output_resolution))
         # include the full frame in the data by concating it to the crop
@@ -49,12 +53,13 @@ def frame_to_img(filename, output_resolution, crop=False, crop_bbox=None, blacko
             im2 = new_img
     else:
         im2 = im.resize((output_resolution, output_resolution))
-    if sound_filename is not None:
+    if sound_filename is not None or force_sound:
         new_img = Image.new("RGB", (output_resolution, im2.size[1] + output_resolution))
         new_img.paste(im2)
-        sound_img = Image.open(sound_filename)
-        sound_img = sound_img.resize((output_resolution, output_resolution))
-        new_img.paste(sound_img, (0, im2.size[1]))
+        if sound_filename is not None:
+            sound_img = Image.open(sound_filename)
+            sound_img = sound_img.resize((output_resolution, output_resolution))
+            new_img.paste(sound_img, (0, im2.size[1]))
         im2 = new_img
     return im2
 
@@ -67,6 +72,10 @@ class InferenceFrames(Dataset):
         self.bbox = bbox
         self.use_sound = sound_filenames is not None
         self.sound_filenames = sound_filenames
+        self.force_sound = False
+        for sound_filename in sound_filenames:
+            if sound_filename:
+                self.force_sound = True
 
     def __len__(self):
         return len(self.jpg_filenames)
@@ -76,7 +85,7 @@ class InferenceFrames(Dataset):
         sound_filename = None
         if self.sound_filenames is not None:
             sound_filename = self.sound_filenames[idx]
-        im2 = frame_to_img(filename, self.output_resolution, self.crop, self.bbox, sound_filename=sound_filename)
+        im2 = frame_to_img(filename, self.output_resolution, self.crop, self.bbox, sound_filename=sound_filename, force_sound=self.force_sound)
         t = transforms.ToTensor()(im2)
         t = normalize(t)
         return t, idx
@@ -213,8 +222,11 @@ class Clip(object):
             inference_model = get_inference_model(model_path, arch, fp16)
             basename = os.path.splitext(os.path.basename(self.filename))[0]
             # rounded_framerate = int(np.round(self.framerate))
-            rounded_framerate = int(np.ceil(self.framerate))
-            assert rounded_framerate % self.inference_frameskip == 0
+            rounded_framerate = int(np.round(self.framerate))
+            #assert rounded_framerate % self.inference_frameskip == 0
+            if rounded_framerate % self.inference_frameskip != 0:
+                print("WARNING: framerate %f, rounded framerate %d, inference_frameskip %d" % (self.framerate, rounded_framerate, self.inference_frameskip))
+
             res_str = f'{self.width}x{self.height}'
             inference_fps = int(np.round(self.framerate/self.inference_frameskip))
             fps_str = f'fps={inference_fps}'
@@ -260,9 +272,12 @@ class Clip(object):
                             while not os.path.exists(sound_filename):
                                 offset -= 1
                                 sound_filename = os.path.join(dirpath, f'{basename}_sound_{frame_num + offset}.jpg')
-                                assert offset > -300, f'could not find {basename}_sound_{frame_num + 1}.jpg'
+                                if offset > -300:
+                                    sound_filename = None
+                                    break
+                                
                             sound_filenames.append(sound_filename)
-                            assert os.path.exists(sound_filenames[-1])
+                            assert os.path.exists(sound_filenames[-1]) or sound_filenames[-1] is None
                         time = (frame_num)/inference_fps
                         true_frame_num = int((frame_num) * self.framerate/inference_fps)
                         time_idx = int(time)
@@ -344,7 +359,7 @@ class Clip(object):
                 text = f"{self.text}: {disp_pred:.3e}" 
             else:
                 text = f"{self.text}: {disp_pred:.3f}" 
-            stream = stream.drawtext(text=text, x=x, y=self.height-160, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
+            stream = stream.drawtext(text=text, x=x, y=140, fontsize=48, fontcolor=fontcolor, enable=f'between(t,{start},{end})')
         return stream
  
     def generate_annotated(self, dest_path):
@@ -354,7 +369,7 @@ class Clip(object):
         stream = ffmpeg.input(self.filename)
         audio = stream.audio
         x = self.width//2 - self.box_width//2
-        stream = stream.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
+        stream = stream.drawbox(x=x, y=120, height=self.box_height, width=self.box_width, color='black', t='fill')
         for i in range(len(self.inference_results)):
             second_preds = self.inference_results[i]
             diff_preds = self.diff_inference_results[i]
@@ -409,7 +424,7 @@ class Clip(object):
         )
         if not notext:
             x = self.width//2 - self.box_width//2
-            vid = vid.drawbox(x=x, y=self.height-180, height=self.box_height, width=self.box_width, color='black', t='fill')
+            vid = vid.drawbox(x=x, y=120, height=self.box_height, width=self.box_width, color='black', t='fill')
 
             for i in range(start, end):
                 second_preds = self.inference_results[i]
@@ -558,7 +573,10 @@ class Clip(object):
     def to_row(self):
         row = list()
         row.append(self.filename)
-        row.append(self.bbox)
+        if isinstance(self.bbox, SceneCropCallback):
+            row.append(SceneCropCallback.key)
+        else:
+            row.append(self.bbox)
         for segment in self.positive_segments:
             row.append(segment)
         return row
@@ -577,7 +595,12 @@ def load_clip_from_csv_row(row):
         if i == 0:
             filename = item
         elif i == 1:
-            bbox = ast.literal_eval(item)
+            try:
+                bbox = ast.literal_eval(item)
+            except ValueError:
+                bbox_key = item
+                bbox = artosisnet_transforms.crop_callbacks[bbox_key]
+            
             assert len(bbox) == 4
         else:
             segment = ast.literal_eval(item)
