@@ -12,6 +12,7 @@ class SceneCropCallback():
     def __init__(self, references, reference_bboxes, key):
         self.references = [Image.open(reference) for reference in references]
         self.reference_bboxes = reference_bboxes
+        assert len(self.references) == len(self.reference_bboxes)
         for idx, ref in enumerate(self.references):
             self.references[idx] = np.asarray(ref.resize((192, 108)))
             # convert RGBA to RGB if needed
@@ -37,10 +38,14 @@ class SceneCropCallback():
         return img.crop(bbox)
 
 
-artosis_callback = SceneCropCallback(['reference_frames/artosis_bwmenu.jpg', 'reference_frames/artosis_ingame1_canonical.jpg', 'reference_frames/artosis_ingame2_canonical.png'],
+artosis_callback = SceneCropCallback(['reference_frames/artosis_bwmenu.jpg', 'reference_frames/artosis_ingame1_canonical.jpg', 'reference_frames/artosis_ingame2_canonical.png', 'reference_frames/bigscene1.png', 'reference_frames/mousekeyboard1.png', 'reference_frames/mousekeyboard2.png', 'reference_frames/unban1.png'],
                                     [[0.3307291666666667, 0.6398148148148148, 0.6177083333333333, 1.0],
                                      [0.7572916666666667, 0.12407407407407407, 0.9854166666666667, 0.4564814814814815],
-                                     [0.7833, 0.1296, 0.9682, 0.3694]],
+                                     [0.7833, 0.1296, 0.9682, 0.3694],
+                                     [0.29010416666666666, 0.4148148148148148, 0.6848958333333334, 1.0],
+                                     [0.7682291666666666, 0.5138888888888888, 0.5138888888888888, 1.0],
+                                     [0.7682291666666666, 0.5138888888888888, 0.5138888888888888, 1.0],
+                                     [0.475, 0.6138888888888889, 0.7130208333333333, 1.0]],
                                     'artosis_callback')
 
 crop_callbacks = dict()
