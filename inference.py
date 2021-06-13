@@ -4,6 +4,7 @@ import os
 import sys
 import time
 from clip import Clip
+from artosisnet_transforms import crop_callbacks
 import random
 import shutil
 import subprocess
@@ -56,7 +57,11 @@ def single_inference(args):
         text = 'pog'
         assert not args.chill
     if args.bbox is not None:
-        clip = Clip(args.single_inference, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
+        try:
+            bbox = ast.literal_eval(args.bbox)
+        except ValueError:
+            bbox = crop_callbacks[args.bbox]
+        clip = Clip(args.single_inference, bbox=bbox, text=text, uncap=args.uncap)
     else:
         clip = Clip(args.single_inference, text=text, uncap=args.uncap)
     clip.inference_frameskip = args.frameskip
@@ -101,7 +106,11 @@ def highlights(args):
                 f.write(f'file \'{path}\'\n')
         _join_videos(tempvideolist, tempconcatvideo)
         if args.bbox is not None:
-            clip = Clip(tempconcatvideo, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
+            try:
+                bbox = ast.literal_eval(args.bbox)
+            except ValueError:
+                bbox = crop_callbacks[args.bbox]
+            clip = Clip(tempconcatvideo, bbox=bbox, text=text, uncap=args.uncap)
         else:
             clip = Clip(tempconcatvideo, text=text, uncap=args.uncap)
         clip.inference_frameskip = args.frameskip
@@ -110,14 +119,19 @@ def highlights(args):
             return
         clip.bin(args.bin_size)
         print(clip.bins)
-        #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adacjent)
+        # old method
+        # clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, delete_temp=args.delete_temp, adjacent=not args.no_adacjent)
         temp_clips = clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, notext=args.notext)
         os.unlink(tempconcatvideo)
         os.unlink(tempvideolist)
     else:
         path = args.prefix
         if args.bbox is not None:
-            clip = Clip(path, bbox=ast.literal_eval(args.bbox), text=text, uncap=args.uncap)
+            try:
+                bbox = ast.literal_eval(args.bbox)
+            except ValueError:
+                bbox = crop_callbacks[args.bbox]
+            clip = Clip(path, bbox=bbox, text=text, uncap=args.uncap)
         else:
             clip = Clip(path, text=text, uncap=args.uncap)
         clip.inference_frameskip = args.frameskip
@@ -127,7 +141,7 @@ def highlights(args):
         clip.bin(args.bin_size)
         print(clip.bins)
         #clip.generate_highlights(bin_size=args.bin_size, output_path=args.name, percentile=args.percentile, threshold=args.threshold, adjacent=not args.no_adjacent)
-        temp_clips = clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, notext=args.notext)
+        temp_clips = clip.generate_highlights_flex(bin_size=args.bin_size, output_path=args.name, threshold=args.threshold, notext=args.notext, url=args.url)
 
     if args.delete_temp:
         for temp_clip_path in temp_clips:
@@ -171,6 +185,7 @@ def main():
     parser.add_argument("--uncap", action='store_true', help='meme uncapped softmax')
     parser.add_argument("--nowaitgpu", action='store_true', help='do not wait for at least 1 gpu')
     parser.add_argument("--crossfade", action='store_true', help='use crossfade concat')
+    parser.add_argument("--url", type=str, help="url for generating clip links")
     args = parser.parse_args()
 
     if not args.nowaitgpu:
@@ -192,9 +207,10 @@ def main():
         assert not args.gypsy
         assert not args.pog
         # args.bbox = "[0.7833, 0.1296, 0.9682, 0.3694]"
-        args.bbox = "[0.7572916666666667, 0.12407407407407407, 0.9854166666666667, 0.4564814814814815]"
-        args.bin_size = 18
-        args.threshold = 0.7
+        # args.bbox = "[0.7572916666666667, 0.12407407407407407, 0.9854166666666667, 0.4564814814814815]"
+        args.bbox = "artosis_callback"
+        args.bin_size = 15
+        args.threshold = 0.70
     if args.pog:
         assert not args.gypsy
         assert not args.artosis

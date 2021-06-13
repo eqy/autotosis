@@ -443,7 +443,7 @@ class Clip(object):
         # output = ffmpeg.overwrite_output(output)
         output.run() 
     
-    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', granularity=1, notext=False):
+    def generate_highlights_flex(self, bin_size=5, threshold=0.500, output_path='output.mp4', granularity=1, notext=False, url=None):
         tempdir = 'tempclips/'
         if not os.path.exists(tempdir):
             os.makedirs(tempdir)
@@ -503,7 +503,9 @@ class Clip(object):
                 i += 1
                 start_time = end_time
         with open(f'{basename}_log.txt', 'w') as f:
-            f.writelines(str(clip) + '\n' for clip in log_list)
+            f.writelines([f'{clip}\n' for clip in log_list])
+            if url is not None:
+                f.writelines([f'{url}?t={int(int(clip[0])/60)}m{int(clip[0])%60}s\n' for clip in log_list])
 
         return temp_clips
 
